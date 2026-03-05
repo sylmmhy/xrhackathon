@@ -1,6 +1,6 @@
 
 import { Types, createComponent, createSystem, Entity } from "@iwsdk/core";
-import { NewSparkRenderer, SplatMesh } from "@sparkjsdev/spark";
+import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { GaussianSplatAnimator } from "./gaussianSplatAnimator.js";
@@ -54,20 +54,20 @@ export class GaussianSplatLoaderSystem extends createSystem({
   private instances = new Map<number, SplatInstance>();
   private animating = new Set<number>();
   private gltfLoader = new GLTFLoader();
-  private sparkRenderer: NewSparkRenderer | null = null;
+  private sparkRenderer: SparkRenderer | null = null;
 
 
   // ----------------------------------------------------------
   // Initialization
   // ----------------------------------------------------------
   init() {
-    const spark = new NewSparkRenderer({
+    const spark = new SparkRenderer({
       renderer: this.world.renderer,
       enableLod: true,
       lodSplatScale: 1.0,
       behindFoveate: 0.1,
-      outsideFoveate: 0.3,
     });
+    spark.outsideFoveate = 0.3;
     spark.renderOrder = -10;
     this.world.scene.add(spark);
     this.sparkRenderer = spark;
