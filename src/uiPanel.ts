@@ -114,21 +114,59 @@ export class PanelSystem extends createSystem({
       if (!document) return;
 
       const xrButton = document.getElementById("xr-button") as UIKit.Text;
-      xrButton.addEventListener("click", () => {
-        if (this.world.visibilityState.value === VisibilityState.NonImmersive) {
-          this.world.launchXR();
-        } else {
-          this.world.exitXR();
-        }
-      });
+      let xrSupported = false;
 
-      this.world.visibilityState.subscribe((visibilityState) => {
+      const updateButtonText = (visibilityState: VisibilityState) => {
+        if (!xrSupported) {
+          xrButton.setProperties({ text: "View World" });
+          return;
+        }
+
         xrButton.setProperties({
           text:
             visibilityState === VisibilityState.NonImmersive
               ? "Enter XR"
               : "Exit to Browser",
         });
+      };
+
+      // Keep the panel in non-XR mode when immersive sessions are unavailable.
+      if (!navigator.xr) {
+        updateButtonText(this.world.visibilityState.value);
+      } else {
+        navigator.xr
+          .isSessionSupported("immersive-vr")
+          .then((supported) => {
+            xrSupported = supported;
+            updateButtonText(this.world.visibilityState.value);
+          })
+          .catch((err) => {
+            xrSupported = false;
+            console.warn("[Panel] Failed to detect XR support:", err);
+            updateButtonText(this.world.visibilityState.value);
+          });
+      }
+
+      xrButton.addEventListener("click", async () => {
+        if (!xrSupported) {
+          // Hide the panel so the user can view the 3D scene
+          if (entity.object3D) entity.object3D.visible = false;
+          return;
+        }
+
+        if (this.world.visibilityState.value === VisibilityState.NonImmersive) {
+          try {
+            await this.world.launchXR();
+          } catch (err) {
+            console.warn("[Panel] XR not available on this device:", err);
+          }
+        } else {
+          this.world.exitXR();
+        }
+      });
+
+      this.world.visibilityState.subscribe((visibilityState) => {
+        updateButtonText(visibilityState);
       });
     }, true);
   }

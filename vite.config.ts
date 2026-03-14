@@ -1,8 +1,15 @@
+import fs from "fs";
+import os from "os";
 import path from "path";
 import { injectIWER } from "@iwsdk/vite-plugin-iwer";
 import { compileUIKit } from "@iwsdk/vite-plugin-uikitml";
 import { defineConfig, type Plugin } from "vite";
 import mkcert from "vite-plugin-mkcert";
+
+const certDir = path.join(os.homedir(), ".vite-plugin-mkcert");
+const certFile = path.join(certDir, "cert.pem");
+const keyFile = path.join(certDir, "dev.pem");
+const hasCerts = fs.existsSync(certFile) && fs.existsSync(keyFile);
 
 // Uncomment the import below and add optimizeGLTF() to the plugins array
 // when you place GLTF/GLB files in public/gltf/:
@@ -41,7 +48,7 @@ function deduplicateThree(): Plugin {
 export default defineConfig({
   plugins: [
     deduplicateThree(),
-    mkcert(),
+    ...(process.env.SKIP_MKCERT ? [] : [mkcert()]),
     injectIWER({
       device: "metaQuest3",
       activation: "localhost",
@@ -55,7 +62,26 @@ export default defineConfig({
     },
     dedupe: ["three"],
   },
-  server: { host: "0.0.0.0", port: 8081, open: true },
+  server: {
+    host: "0.0.0.0",
+    port: 8081,
+    open: true,
+    proxy: {
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/assets": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
+    hmr: process.env.NGROK ? false : undefined,
+    allowedHosts: [".ngrok-free.app"],
+    ...(process.env.SKIP_MKCERT && hasCerts
+      ? { https: { key: fs.readFileSync(keyFile), cert: fs.readFileSync(certFile) } }
+      : {}),
+  },
   build: {
     outDir: "dist",
     sourcemap: process.env.NODE_ENV !== "production",
