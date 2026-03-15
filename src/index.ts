@@ -303,13 +303,11 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
               console.warn("[World] Could not create world for Meshy:", err);
             }
           }
+          // Always enable voice and upload UI
+          createVoiceCommandUI(world, splatWorldId || "", apiBase);
+          createUploadUI(world, splatWorldId || "");
           if (splatWorldId) {
-            createUploadUI(world, splatWorldId);
-            createVoiceCommandUI(world, splatWorldId, apiBase);
             loadExistingObjects(world, splatWorldId, apiBase);
-          } else {
-            // No backend, still enable voice with local assets
-            createVoiceCommandUI(world, "", apiBase);
           }
         })
         .catch((err) => {

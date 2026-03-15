@@ -234,7 +234,7 @@ export class PanelSystem extends createSystem({
 
         worldButton.setProperties({ text: worlds[0].name });
 
-        worldButton.addEventListener("click", () => {
+        const doSwitch = () => {
           if (switching) return;
           switching = true;
           currentWorldIndex = (currentWorldIndex + 1) % worlds.length;
@@ -245,14 +245,17 @@ export class PanelSystem extends createSystem({
               detail: { splatUrl: next.url, autoFit: next.autoFit, position: next.position, walls: next.walls },
             }),
           );
-          // Listen for completion
           const onDone = () => {
             switching = false;
             worldButton.setProperties({ text: next.name });
             globalThis.removeEventListener("switch-world-done", onDone);
           };
           globalThis.addEventListener("switch-world-done", onDone);
-        });
+        };
+
+        worldButton.addEventListener("click", doSwitch);
+        // Voice command trigger
+        globalThis.addEventListener("voice-switch-world", doSwitch);
       }
 
       // Drop Toy button
@@ -273,6 +276,26 @@ export class PanelSystem extends createSystem({
             dropping = false;
             dropToyButton.setProperties({ text: "Drop Toy" });
           }, 1500);
+        });
+      }
+
+      // Mic button — dispatches event handled by voiceCommand.ts
+      const micButton = document.getElementById("mic-button") as UIKit.Text;
+      if (micButton) {
+        micButton.addEventListener("click", () => {
+          globalThis.dispatchEvent(new Event("panel-mic-toggle"));
+        });
+        // Listen for mic state changes to update button text
+        globalThis.addEventListener("mic-state", ((e: CustomEvent) => {
+          micButton.setProperties({ text: e.detail.listening ? "Stop" : "Mic" });
+        }) as EventListener);
+      }
+
+      // Photo button — dispatches event handled by uploadUI.ts
+      const photoButton = document.getElementById("photo-button") as UIKit.Text;
+      if (photoButton) {
+        photoButton.addEventListener("click", () => {
+          globalThis.dispatchEvent(new Event("panel-photo-upload"));
         });
       }
     }, true);

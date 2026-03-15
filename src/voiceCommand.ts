@@ -1,14 +1,13 @@
 import * as THREE from "three";
 import { World } from "@iwsdk/core";
 import { spawnGLBFromUrl } from "./objectLoader.js";
+import { GeminiVoiceSession } from "./geminiVoice.js";
 
 // ---------------------------------------------------------------------------
-// Voice command system — uses the browser Web Speech API
+// Voice command system — uses Gemini Multimodal Live API
 // ---------------------------------------------------------------------------
 
-const SpeechRecognition =
-  (globalThis as any).SpeechRecognition ||
-  (globalThis as any).webkitSpeechRecognition;
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY as string;
 
 interface VoiceAction {
   keywords: string[];
@@ -61,14 +60,14 @@ export function createVoiceCommandUI(
   worldId: string,
   _apiBase: string,
 ): void {
-  if (!SpeechRecognition) {
-    console.warn("[voiceCommand] Web Speech API not supported in this browser");
+  if (!GEMINI_API_KEY) {
+    console.warn("[voiceCommand] GEMINI_API_KEY not set — voice disabled");
     return;
   }
 
   const DEFAULT_PLUSH_GLB = "./SM_Aligator.glb";
   let cachedPlushGlbUrl: string | null = null;
-  let listening = false;
+  let session: GeminiVoiceSession | null = null;
 
   // --- Status display (visible in both flat + VR via DOM overlay) ---
   const statusEl = document.createElement("div");
@@ -97,6 +96,32 @@ export function createVoiceCommandUI(
 
   // --- Voice actions ---
   const actions: VoiceAction[] = [
+    {
+      keywords: ["make it rain"],
+      cooldown: 5000,
+      lastFired: 0,
+      handler: async () => {
+        const glb = cachedPlushGlbUrl || DEFAULT_PLUSH_GLB;
+        statusEl.textContent = "Make it rain!";
+        statusEl.style.display = "block";
+        await rainObjects(world, glb, 15);
+        statusEl.textContent = "Done!";
+        setTimeout(() => { statusEl.style.display = "none"; }, 2000);
+      },
+    },
+    {
+      keywords: ["change world"],
+      cooldown: 5000,
+      lastFired: 0,
+      handler: async () => {
+        statusEl.textContent = "Changing world...";
+        statusEl.style.display = "block";
+        globalThis.dispatchEvent(
+          new Event("voice-switch-world"),
+        );
+        setTimeout(() => { statusEl.style.display = "none"; }, 3000);
+      },
+    },
     {
       keywords: ["plush", "plushie", "teddy", "toy", "stuffed"],
       cooldown: 10000,
@@ -130,31 +155,9 @@ export function createVoiceCommandUI(
     },
   ];
 
-  // --- Speech recognition ---
-  const recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.lang = "en-US";
-
-  function startListening() {
-    if (listening) return;
-    recognition.start();
-    listening = true;
-    micBtn.style.background = "#e11d48";
-    statusEl.textContent = "Listening...";
-    statusEl.style.display = "block";
-  }
-
-  function stopListening() {
-    if (!listening) return;
-    recognition.stop();
-    listening = false;
-    micBtn.style.background = "#7b2ff2";
-  }
-
-  recognition.onresult = (event: any) => {
-    const transcript: string = event.results[0][0].transcript.toLowerCase();
-    console.log("[voiceCommand] Heard:", transcript);
+  // --- Handle transcript from Gemini ---
+  function handleTranscript(transcript: string) {
+    console.log("[voiceCommand] Gemini heard:", transcript);
     statusEl.textContent = `"${transcript}"`;
     statusEl.style.display = "block";
 
@@ -172,61 +175,88 @@ export function createVoiceCommandUI(
     if (!matched) {
       setTimeout(() => { statusEl.style.display = "none"; }, 2000);
     }
-  };
+  }
 
-  recognition.onerror = (event: any) => {
-    console.warn("[voiceCommand] Error:", event.error);
-    listening = false;
-    micBtn.style.background = "#7b2ff2";
-    if (event.error !== "no-speech") {
-      statusEl.textContent = `Voice error: ${event.error}`;
-      statusEl.style.display = "block";
-      setTimeout(() => { statusEl.style.display = "none"; }, 3000);
-    }
-  };
+  // --- Start / stop Gemini session ---
+  function broadcastMicState(listening: boolean) {
+    globalThis.dispatchEvent(
+      new CustomEvent("mic-state", { detail: { listening } }),
+    );
+  }
 
-  recognition.onend = () => {
-    listening = false;
-    micBtn.style.background = "#7b2ff2";
-  };
+  function startListening() {
+    if (session?.isActive) return;
+
+    session = new GeminiVoiceSession({
+      apiKey: GEMINI_API_KEY,
+      onTranscript: handleTranscript,
+      onListening: () => {
+        micBtn.style.background = "#e11d48";
+        statusEl.textContent = "Listening (Gemini)...";
+        statusEl.style.display = "block";
+        broadcastMicState(true);
+      },
+      onError: (err) => {
+        console.warn("[voiceCommand] Gemini error:", err);
+        micBtn.style.background = "#7b2ff2";
+        statusEl.textContent = `Voice error: ${err}`;
+        statusEl.style.display = "block";
+        setTimeout(() => { statusEl.style.display = "none"; }, 3000);
+        broadcastMicState(false);
+      },
+      onStopped: () => {
+        micBtn.style.background = "#7b2ff2";
+        broadcastMicState(false);
+      },
+    });
+
+    session.start();
+  }
+
+  function stopListening() {
+    if (!session?.isActive) return;
+    session.stop();
+    session = null;
+    statusEl.textContent = "";
+    statusEl.style.display = "none";
+  }
 
   // --- Flat mode: click mic button ---
   micBtn.addEventListener("click", () => {
-    if (listening) stopListening();
+    if (session?.isActive) stopListening();
     else startListening();
   });
 
-  // --- VR mode: left controller X button (index 4) or A button (index 4) ---
-  // Poll gamepad buttons each frame while in XR
+  // --- Panel UI mic button ---
+  globalThis.addEventListener("panel-mic-toggle", () => {
+    if (session?.isActive) stopListening();
+    else startListening();
+  });
+
+  // --- VR mode: left controller X button (index 4) ---
   let xrButtonWasPressed = false;
 
   function pollXRButtons() {
-    const session = world.renderer.xr.getSession();
-    if (!session) return;
+    const xrSession = world.renderer.xr.getSession();
+    if (!xrSession) return;
 
-    for (const source of session.inputSources) {
+    for (const source of xrSession.inputSources) {
       const gp = source.gamepad;
       if (!gp) continue;
 
-      // Button 4 = X (left) or A (right) on Meta Quest / Pico controllers
-      // Button 5 = Y (left) or B (right)
-      // We use button 4 (X/A) as the voice trigger
       const btn = gp.buttons[4];
       if (!btn) continue;
 
       if (btn.pressed && !xrButtonWasPressed) {
-        // Button just pressed — start listening
         xrButtonWasPressed = true;
         startListening();
       } else if (!btn.pressed && xrButtonWasPressed) {
-        // Button released — stop (recognition will fire onresult)
         xrButtonWasPressed = false;
-        // Don't call stopListening() — let it finish naturally
+        stopListening();
       }
     }
   }
 
-  // Poll XR buttons every frame via requestAnimationFrame
   const pollLoop = () => {
     requestAnimationFrame(pollLoop);
     if (world.renderer.xr.isPresenting) {
@@ -235,5 +265,5 @@ export function createVoiceCommandUI(
   };
   pollLoop();
 
-  console.log("[voiceCommand] Initialized — mic button (flat) / X button (VR)");
+  console.log("[voiceCommand] Initialized with Gemini Live API — mic button (flat) / X button (VR)");
 }

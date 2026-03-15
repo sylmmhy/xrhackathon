@@ -100,6 +100,42 @@
     text-align: center;
     cursor: pointer;
   }
+
+  .bottom-row {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    margin-top: 0.4;
+    gap: 0.4;
+  }
+
+  #mic-button {
+    flex: 1;
+    padding: 0.8;
+    background-color: rgba(123, 47, 242, 0.25);
+    color: #fbbf24;
+    border-color: rgba(123, 47, 242, 0.4);
+    border-width: 0.05;
+    border-radius: 1.2;
+    font-size: 1.3;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  #photo-button {
+    flex: 1;
+    padding: 0.8;
+    background-color: rgba(123, 47, 242, 0.25);
+    color: #fbbf24;
+    border-color: rgba(123, 47, 242, 0.4);
+    border-width: 0.05;
+    border-radius: 1.2;
+    font-size: 1.3;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+  }
 </style>
 <div class="panel-container">
   <img src="/SensAI-logo.png" alt="SensAI" class="logo" />
@@ -110,4 +146,8 @@
   <button id="rain-button">Rain Toys</button>
   <button id="world-button">Switch World</button>
   <button id="drop-toy-button">Drop Toy</button>
+  <div class="bottom-row">
+    <button id="mic-button">Mic</button>
+    <button id="photo-button">Add Photo</button>
+  </div>
 </div>

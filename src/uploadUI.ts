@@ -137,6 +137,12 @@ export function createUploadUI(world: World, worldId: string): void {
     input.click();
   });
 
+  // Panel UI photo button
+  globalThis.addEventListener("panel-photo-upload", () => {
+    input.value = "";
+    input.click();
+  });
+
   input.addEventListener("change", () => {
     const file = input.files?.[0];
     if (file) processFile(file);
