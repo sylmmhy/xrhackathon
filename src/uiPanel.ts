@@ -9,6 +9,7 @@ import {
   UIKit,
 } from "@iwsdk/core";
 import * as THREE from "three";
+import { rainToys } from "./vrRainButton.js";
 
 // Render UI on top of splats using AlwaysDepth + high renderOrder.
 // depthWrite stays true so the IWSDK laser pointer depth-tests correctly
@@ -204,6 +205,50 @@ export class PanelSystem extends createSystem({
       this.world.visibilityState.subscribe((visibilityState) => {
         updateButtonText(visibilityState);
       });
+
+      // Rain button
+      const rainButton = document.getElementById("rain-button") as UIKit.Text;
+      if (rainButton) {
+        let lastRain = 0;
+        rainButton.addEventListener("click", () => {
+          const now = Date.now();
+          if (now - lastRain < 8000) return;
+          lastRain = now;
+          rainButton.setProperties({ text: "Raining!" });
+          rainToys(this.world, 15);
+          setTimeout(() => rainButton.setProperties({ text: "Rain Toys" }), 3000);
+        });
+      }
+
+      // World switch button
+      const worldButton = document.getElementById("world-button") as UIKit.Text;
+      if (worldButton) {
+        const worlds = [
+          { name: "Disney Castle", url: "./splats/disney_castle.spz" },
+        ];
+        let currentWorldIndex = 0;
+        let switching = false;
+
+        worldButton.setProperties({ text: `World: ${worlds[0].name}` });
+
+        worldButton.addEventListener("click", () => {
+          if (switching) return;
+          switching = true;
+          currentWorldIndex = (currentWorldIndex + 1) % worlds.length;
+          const next = worlds[currentWorldIndex];
+          worldButton.setProperties({ text: "Loading..." });
+          globalThis.dispatchEvent(
+            new CustomEvent("switch-world", { detail: { splatUrl: next.url } }),
+          );
+          // Listen for completion
+          const onDone = () => {
+            switching = false;
+            worldButton.setProperties({ text: `World: ${next.name}` });
+            globalThis.removeEventListener("switch-world-done", onDone);
+          };
+          globalThis.addEventListener("switch-world-done", onDone);
+        });
+      }
     }, true);
   }
 }

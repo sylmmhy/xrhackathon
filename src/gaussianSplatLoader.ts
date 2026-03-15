@@ -184,6 +184,27 @@ export class GaussianSplatLoaderSystem extends createSystem({
     });
     await Promise.race([splat.initialized, timeout]);
 
+    // Auto-center and scale: Marble worlds can have huge extents
+    // (e.g. 0–16384) with the camera at origin. Move the splat so its
+    // bounding-box center aligns with the camera and scale to fit.
+    const bbox = splat.getBoundingBox(true);
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    bbox.getCenter(center);
+    bbox.getSize(size);
+    const maxExtent = Math.max(size.x, size.y, size.z);
+    const targetSize = 20; // desired scene diameter in world units
+    if (maxExtent > targetSize) {
+      const s = targetSize / maxExtent;
+      splat.scale.setScalar(s);
+      // After scaling, the center moves by scale factor
+      splat.position.set(-center.x * s, -center.y * s + 1.5, -center.z * s);
+    }
+    console.log(
+      `[GaussianSplatLoader] bbox center=(${center.x.toFixed(1)}, ${center.y.toFixed(1)}, ${center.z.toFixed(1)})` +
+        ` size=(${size.x.toFixed(1)}, ${size.y.toFixed(1)}, ${size.z.toFixed(1)}) maxExtent=${maxExtent.toFixed(1)}`,
+    );
+
     let collider: THREE.Group | null = null;
     if (meshUrl) {
       const gltf = await this.gltfLoader.loadAsync(meshUrl);

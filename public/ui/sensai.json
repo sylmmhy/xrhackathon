@@ -54,6 +54,28 @@
           "id": "xr-button"
         },
         "dataUid": "uid-6"
+      },
+      {
+        "sourceTag": "button",
+        "type": "custom",
+        "children": [
+          "Rain Toys"
+        ],
+        "properties": {
+          "id": "rain-button"
+        },
+        "dataUid": "uid-7"
+      },
+      {
+        "sourceTag": "button",
+        "type": "custom",
+        "children": [
+          "Switch World"
+        ],
+        "properties": {
+          "id": "world-button"
+        },
+        "dataUid": "uid-8"
       }
     ],
     "properties": {
@@ -116,6 +138,37 @@
         "color": "#0d0221",
         "borderRadius": 1.5,
         "borderWidth": "0",
+        "fontSize": "2.5",
+        "fontWeight": "bold",
+        "textAlign": "center",
+        "cursor": "pointer"
+      }
+    },
+    "__id__rain-button": {
+      "content": {
+        "width": "100%",
+        "padding": "1.5",
+        "marginTop": "1",
+        "backgroundColor": "#7b2ff2",
+        "color": "#fbbf24",
+        "borderRadius": 1.5,
+        "borderWidth": "0",
+        "fontSize": "2.5",
+        "fontWeight": "bold",
+        "textAlign": "center",
+        "cursor": "pointer"
+      }
+    },
+    "__id__world-button": {
+      "content": {
+        "width": "100%",
+        "padding": "1.5",
+        "marginTop": "1",
+        "backgroundColor": "#1a1a3e",
+        "color": "#c4b5fd",
+        "borderColor": "#7b2ff2",
+        "borderWidth": "0.15",
+        "borderRadius": 1.5,
         "fontSize": "2.5",
         "fontWeight": "bold",
         "textAlign": "center",

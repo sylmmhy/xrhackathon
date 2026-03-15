@@ -29,7 +29,7 @@ import { createTouchGrabController } from "./touchGrabController.js";
 import { createTouchLocomotion } from "./touchLocomotion.js";
 import { GrabPhysicsSystem } from "./grabPhysicsSystem.js";
 import { createVoiceCommandUI } from "./voiceCommand.js";
-import { createVRRainButton } from "./vrRainButton.js";
+// rainToys is now triggered from the panel UI button
 
 
 // ------------------------------------------------------------
@@ -81,6 +81,19 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
           console.error("[World] Failed to replay splat animation:", err);
         });
       }
+    });
+
+    // Listen for world switch from panel UI
+    globalThis.addEventListener("switch-world", async (e) => {
+      const { splatUrl } = (e as CustomEvent).detail;
+      try {
+        await splatSystem.unload(splatEntity, { animate: true });
+        splatEntity.setValue(GaussianSplatLoader, "splatUrl", splatUrl);
+        await splatSystem.load(splatEntity, { animate: true });
+      } catch (err) {
+        console.error("[World] Failed to switch world:", err);
+      }
+      globalThis.dispatchEvent(new Event("switch-world-done"));
     });
 
     
@@ -234,9 +247,6 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
               console.error("[World] Failed to load test GLB:", err),
             );
           }
-
-          // VR rain button — point and press trigger to rain toys
-          createVRRainButton(world);
 
           // Use existing world_id or create one via test endpoint for Meshy upload
           let splatWorldId: string = worldId || "";
