@@ -105,7 +105,24 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       globalThis.dispatchEvent(new Event("switch-world-done"));
     });
 
-    
+    // Listen for drop-toy from panel UI
+    globalThis.addEventListener("drop-toy", async (e) => {
+      const { glbUrl } = (e as CustomEvent).detail;
+      try {
+        // Drop in front of camera within the field of view
+        const cam = world.camera;
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+        const dropPos = new THREE.Vector3()
+          .copy(cam.position)
+          .addScaledVector(forward, 2 + Math.random())        // 2-3m in front
+          .add(new THREE.Vector3((Math.random() - 0.5) * 1.5, 4, (Math.random() - 0.5) * 1.5)); // slight random spread + 4m above
+        await spawnGLBFromUrl(world, glbUrl, dropPos);
+      } catch (err) {
+        console.error("[World] Failed to drop toy:", err);
+      }
+    });
+
+
     // ------------------------------------------------------------
     // Invisible floor for locomotion (must be a Mesh for IWSDK raycasting)
     // ------------------------------------------------------------

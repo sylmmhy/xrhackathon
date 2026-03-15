@@ -6,9 +6,9 @@ import {
   PhysicsState,
 } from "@iwsdk/core";
 
-const PUSH_RADIUS = 0.6; // how close before push triggers
-const PUSH_FORCE = 4.0; // impulse strength
-const PUSH_UP = 1.5; // upward lift on push (plush bounce feel)
+const PUSH_RADIUS = 0.5;
+const PUSH_FORCE = 1.2;
+const PUSH_UP = 0.3;
 
 /**
  * Detects when the player walks into dynamic physics objects
@@ -64,19 +64,19 @@ export class PlayerPushSystem extends createSystem({
       if (dist < PUSH_RADIUS && dist > 0.01) {
         // Push direction: away from player
         const pushDir = diff.normalize();
-        const force = PUSH_FORCE * Math.min(playerSpeed, 5);
+        const force = PUSH_FORCE * Math.min(playerSpeed, 3);
 
         if (!entity.hasComponent(PhysicsManipulation)) {
           entity.addComponent(PhysicsManipulation, {
             linearVelocity: [
               pushDir.x * force,
-              PUSH_UP + Math.random() * 1.5,
+              PUSH_UP + Math.random() * 0.3,
               pushDir.z * force,
             ],
             angularVelocity: [
-              (Math.random() - 0.5) * 6,
-              (Math.random() - 0.5) * 6,
-              (Math.random() - 0.5) * 6,
+              (Math.random() - 0.5) * 2,
+              (Math.random() - 0.5) * 2,
+              (Math.random() - 0.5) * 2,
             ],
           });
         }

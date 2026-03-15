@@ -252,6 +252,27 @@ export class PanelSystem extends createSystem({
           globalThis.addEventListener("switch-world-done", onDone);
         });
       }
+
+      // Drop Toy button
+      const dropToyButton = document.getElementById("drop-toy-button") as UIKit.Text;
+      if (dropToyButton) {
+        const toyModels = ["./CuteFox.glb", "./GothicFox.glb", "./SM_Aligator.glb"];
+        let dropping = false;
+
+        dropToyButton.addEventListener("click", () => {
+          if (dropping) return;
+          dropping = true;
+          dropToyButton.setProperties({ text: "Dropping..." });
+          const model = toyModels[Math.floor(Math.random() * toyModels.length)];
+          globalThis.dispatchEvent(
+            new CustomEvent("drop-toy", { detail: { glbUrl: model } }),
+          );
+          setTimeout(() => {
+            dropping = false;
+            dropToyButton.setProperties({ text: "Drop Toy" });
+          }, 1500);
+        });
+      }
     }, true);
   }
 }

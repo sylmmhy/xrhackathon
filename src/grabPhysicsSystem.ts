@@ -5,6 +5,7 @@ import {
   PhysicsBody,
   PhysicsManipulation,
   PhysicsState,
+  Pressed,
 } from "@iwsdk/core";
 
 // Internal Handle component used by IWSDK's GrabSystem
@@ -66,6 +67,10 @@ export class GrabPhysicsSystem extends createSystem({
         // --- Grab started ---
         if (!tracker.wasGrabbed) {
           entity.setValue(PhysicsBody, "state", PhysicsState.Kinematic);
+          // Tell PhysicsSystem to sync kinematic body to Object3D transform
+          if (!entity.hasComponent(Pressed)) {
+            entity.addComponent(Pressed);
+          }
           tracker.positions.length = 0;
           tracker.times.length = 0;
         }
@@ -80,6 +85,9 @@ export class GrabPhysicsSystem extends createSystem({
         tracker.wasGrabbed = true;
       } else if (tracker.wasGrabbed) {
         // --- Just released ---
+        if (entity.hasComponent(Pressed)) {
+          entity.removeComponent(Pressed);
+        }
         entity.setValue(PhysicsBody, "state", PhysicsState.Dynamic);
 
         // Calculate average velocity from buffered samples

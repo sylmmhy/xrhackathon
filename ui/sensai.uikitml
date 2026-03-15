@@ -81,6 +81,21 @@
     text-align: center;
     cursor: pointer;
   }
+
+  #drop-toy-button {
+    width: 100%;
+    padding: 1.5;
+    margin-top: 1;
+    background-color: #0d4a3e;
+    color: #34d399;
+    border-color: #34d399;
+    border-width: 0.15;
+    border-radius: 1.5;
+    font-size: 2.5;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+  }
 </style>
 <div class="panel-container">
   <img src="/SensAI-logo.png" alt="SensAI" class="logo" />
@@ -90,4 +105,5 @@
   <button id="xr-button">Enter XR</button>
   <button id="rain-button">Rain Toys</button>
   <button id="world-button">Switch World</button>
+  <button id="drop-toy-button">Drop Toy</button>
 </div>
