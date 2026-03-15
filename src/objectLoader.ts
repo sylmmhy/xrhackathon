@@ -3,6 +3,10 @@ import {
   DistanceGrabbable,
   Interactable,
   MovementMode,
+  PhysicsBody,
+  PhysicsShape,
+  PhysicsShapeType,
+  PhysicsState,
   World,
 } from "@iwsdk/core";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -43,6 +47,12 @@ export async function spawnGLBFromUrl(
     model.scale.multiplyScalar(scale);
   }
 
+  // Disable frustum culling — prevents the model from disappearing
+  // in one eye during WebXR stereo rendering on devices like Pico.
+  model.traverse((child) => {
+    child.frustumCulled = false;
+  });
+
   // Default position: 2m in front of camera at eye height
   if (position) {
     model.position.copy(position);
@@ -54,6 +64,10 @@ export async function spawnGLBFromUrl(
     model.position.copy(cam.position).addScaledVector(dir, 2);
   }
 
+  // Compute bounding box after scaling for physics shape dimensions
+  const scaledBox = new THREE.Box3().setFromObject(model);
+  const scaledSize = scaledBox.getSize(new THREE.Vector3());
+
   world
     .createTransformEntity(model)
     .addComponent(Interactable)
@@ -62,6 +76,19 @@ export async function spawnGLBFromUrl(
       translate: true,
       rotate: true,
       scale: false,
+    })
+    .addComponent(PhysicsBody, {
+      state: PhysicsState.Dynamic,
+      linearDamping: 0.3,
+      angularDamping: 0.3,
+      gravityFactor: 1.0,
+    })
+    .addComponent(PhysicsShape, {
+      shape: PhysicsShapeType.ConvexHull,
+      dimensions: [scaledSize.x, scaledSize.y, scaledSize.z],
+      density: 2.0,
+      friction: 0.6,
+      restitution: 0.4,
     });
 
   console.log("[objectLoader] Spawned GLB:", glbUrl);

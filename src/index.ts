@@ -7,6 +7,10 @@ import {
   Mesh,
   MeshBasicMaterial,
   PanelUI,
+  PhysicsBody,
+  PhysicsShape,
+  PhysicsShapeType,
+  PhysicsState,
   PlaneGeometry,
   ScreenSpace,
   SessionMode,
@@ -23,6 +27,8 @@ import { fetchWorldAssets, type WorldAssets } from "./worldGenerator.js";
 import { DeviceOrientationCamera } from "./deviceOrientationCamera.js";
 import { createTouchGrabController } from "./touchGrabController.js";
 import { createTouchLocomotion } from "./touchLocomotion.js";
+import { GrabPhysicsSystem } from "./grabPhysicsSystem.js";
+import { createVoiceCommandUI } from "./voiceCommand.js";
 
 
 // ------------------------------------------------------------
@@ -41,7 +47,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   features: {
     locomotion: true,
     grabbing: true,
-    physics: false,
+    physics: true,
     sceneUnderstanding: false,
   },
 })
@@ -55,7 +61,8 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
     world
       .registerSystem(PanelSystem)
-      .registerSystem(GaussianSplatLoaderSystem);
+      .registerSystem(GaussianSplatLoaderSystem)
+      .registerSystem(GrabPhysicsSystem);
 
 
     // ------------------------------------------------------------
@@ -85,7 +92,14 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     floor.visible = false;
     world
       .createTransformEntity(floor)
-      .addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC });
+      .addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC })
+      .addComponent(PhysicsBody, { state: PhysicsState.Static })
+      .addComponent(PhysicsShape, {
+        shape: PhysicsShapeType.Box,
+        dimensions: [100, 0.01, 100],
+        friction: 0.8,
+        restitution: 0.3,
+      });
 
     const grid = new THREE.GridHelper(100, 100, 0x444444, 0x222222);
     grid.material.transparent = true;
@@ -238,7 +252,11 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
           }
           if (splatWorldId) {
             createUploadUI(world, splatWorldId);
+            createVoiceCommandUI(world, splatWorldId, apiBase);
             loadExistingObjects(world, splatWorldId, apiBase);
+          } else {
+            // No backend, still enable voice with local assets
+            createVoiceCommandUI(world, "", apiBase);
           }
         })
         .catch((err) => {
