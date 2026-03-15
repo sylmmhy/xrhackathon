@@ -29,6 +29,7 @@ import { createTouchGrabController } from "./touchGrabController.js";
 import { createTouchLocomotion } from "./touchLocomotion.js";
 import { GrabPhysicsSystem } from "./grabPhysicsSystem.js";
 import { createVoiceCommandUI } from "./voiceCommand.js";
+import { createVRRainButton } from "./vrRainButton.js";
 
 
 // ------------------------------------------------------------
@@ -233,6 +234,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
               console.error("[World] Failed to load test GLB:", err),
             );
           }
+
+          // VR rain button — point and press trigger to rain toys
+          createVRRainButton(world);
 
           // Use existing world_id or create one via test endpoint for Meshy upload
           let splatWorldId: string = worldId || "";
