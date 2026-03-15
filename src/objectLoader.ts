@@ -14,16 +14,14 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 const gltfLoader = new GLTFLoader();
 const POLL_INTERVAL_MS = 3000;
 
-/**
- * Load a GLB from URL and spawn it as a grabbable entity in the world.
- * Auto-scales to ~0.5m and places at the given position (default: 2m in front of camera).
- */
-export async function spawnGLBFromUrl(
-  world: World,
-  glbUrl: string,
-  position?: THREE.Vector3,
-): Promise<void> {
-  // Fetch via fetch() then load from blob URL (handles ngrok/CORS)
+// GLB cache: fetch + parse once, clone for each spawn
+interface CachedGLB {
+  scene: THREE.Group;
+  scaledSize: THREE.Vector3;
+}
+const glbCache = new Map<string, Promise<CachedGLB>>();
+
+async function loadAndCacheGLB(glbUrl: string): Promise<CachedGLB> {
   const resp = await fetch(glbUrl, {
     headers: { "ngrok-skip-browser-warning": "true" },
   });
@@ -36,22 +34,47 @@ export async function spawnGLBFromUrl(
   const blobUrl = URL.createObjectURL(blob);
   const gltf = await gltfLoader.loadAsync(blobUrl);
   URL.revokeObjectURL(blobUrl);
-  const model = gltf.scene;
+  const scene = gltf.scene;
 
   // Auto-scale to ~1m
-  const box = new THREE.Box3().setFromObject(model);
+  const box = new THREE.Box3().setFromObject(scene);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
   if (maxDim > 0) {
-    const scale = 1.0 / maxDim;
-    model.scale.multiplyScalar(scale);
+    scene.scale.multiplyScalar(1.0 / maxDim);
   }
 
-  // Disable frustum culling — prevents the model from disappearing
-  // in one eye during WebXR stereo rendering on devices like Pico.
-  model.traverse((child) => {
-    child.frustumCulled = false;
-  });
+  // Disable frustum culling
+  scene.traverse((child) => { child.frustumCulled = false; });
+
+  // Compute bounding box after scaling for physics shape
+  const scaledBox = new THREE.Box3().setFromObject(scene);
+  const scaledSize = scaledBox.getSize(new THREE.Vector3());
+
+  console.log("[objectLoader] Cached GLB:", glbUrl);
+  return { scene, scaledSize };
+}
+
+function getCachedGLB(glbUrl: string): Promise<CachedGLB> {
+  let cached = glbCache.get(glbUrl);
+  if (!cached) {
+    cached = loadAndCacheGLB(glbUrl);
+    glbCache.set(glbUrl, cached);
+  }
+  return cached;
+}
+
+/**
+ * Load a GLB from URL and spawn it as a grabbable entity in the world.
+ * Uses a cache so repeated spawns of the same model skip fetch/parse.
+ */
+export async function spawnGLBFromUrl(
+  world: World,
+  glbUrl: string,
+  position?: THREE.Vector3,
+): Promise<void> {
+  const { scene, scaledSize } = await getCachedGLB(glbUrl);
+  const model = scene.clone(true);
 
   // Default position: 2m in front of camera at eye height
   if (position) {
@@ -63,10 +86,6 @@ export async function spawnGLBFromUrl(
     dir.normalize();
     model.position.copy(cam.position).addScaledVector(dir, 2);
   }
-
-  // Compute bounding box after scaling for physics shape dimensions
-  const scaledBox = new THREE.Box3().setFromObject(model);
-  const scaledSize = scaledBox.getSize(new THREE.Vector3());
 
   world
     .createTransformEntity(model)
@@ -91,7 +110,7 @@ export async function spawnGLBFromUrl(
       restitution: 0.5,
     });
 
-  console.log("[objectLoader] Spawned GLB:", glbUrl);
+  console.log("[objectLoader] Spawned GLB (cached):", glbUrl);
 }
 
 /**

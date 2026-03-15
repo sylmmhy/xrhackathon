@@ -16,14 +16,13 @@ export async function rainToys(
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
   forward.y = 0;
   forward.normalize();
-  const center = cam.position.clone().addScaledVector(forward, 3);
+  const center = cam.position.clone().addScaledVector(forward, 2);
 
   for (let i = 0; i < count; i++) {
-    // Small random spread so they stack like a tower
     const pos = new THREE.Vector3(
-      center.x + (Math.random() - 0.5) * 0.5,
-      4 + i * 1.2,
-      center.z + (Math.random() - 0.5) * 0.5,
+      center.x + (Math.random() - 0.5) * 2,
+      cam.position.y + 3 + i * 1.2,
+      center.z + (Math.random() - 0.5) * 2,
     );
     spawnGLBFromUrl(world, glbUrl, pos).catch((err) =>
       console.warn("[rainToys] spawn failed:", err),

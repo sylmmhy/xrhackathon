@@ -55,7 +55,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
   },
 })
   .then(async (world) => {
-    world.camera.position.set(0, 1.5, 0);
+    world.camera.position.set(0, 1.8, 0);
     world.scene.background = new THREE.Color(0x000000);
     world.scene.add(new THREE.AmbientLight(0xffffff, 1.0));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -93,10 +93,13 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         await splatSystem.unload(splatEntity, { animate: true });
         splatEntity.setValue(GaussianSplatLoader, "splatUrl", splatUrl);
         splatEntity.setValue(GaussianSplatLoader, "autoFit", !!autoFit);
-        if (position && splatEntity.object3D) {
-          splatEntity.object3D.position.set(position[0], position[1], position[2]);
-        } else if (splatEntity.object3D) {
-          splatEntity.object3D.position.set(0, 0, 0);
+        const pos = position || [0, 0, 0];
+        if (splatEntity.object3D) {
+          splatEntity.object3D.position.set(pos[0], pos[1], pos[2]);
+        }
+        // Move invisible floor to match scene Y offset so toys land correctly
+        if (floorEntity.object3D) {
+          floorEntity.object3D.position.y = pos[1];
         }
         await splatSystem.load(splatEntity, { animate: true });
       } catch (err) {
@@ -130,7 +133,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     floorGeometry.rotateX(-Math.PI / 2);
     const floor = new Mesh(floorGeometry, new MeshBasicMaterial());
     floor.visible = false;
-    world
+    const floorEntity = world
       .createTransformEntity(floor)
       .addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC })
       .addComponent(PhysicsBody, { state: PhysicsState.Static })
@@ -150,7 +153,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     // ------------------------------------------------------------
     // Hologram Sphere (distance-grabbable, translate in place)
     // ------------------------------------------------------------
-    spawnHologramSphere(world);
+    // spawnHologramSphere(world);
 
 
     // ------------------------------------------------------------
