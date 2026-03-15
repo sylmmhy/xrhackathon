@@ -237,64 +237,104 @@
         "column": 12
       }
     },
-    "uid-1": {
+    "__id__rain-button": {
       "start": {
         "line": 55,
+        "column": 2
+      },
+      "end": {
+        "line": 55,
+        "column": 14
+      }
+    },
+    "__id__world-button": {
+      "start": {
+        "line": 69,
+        "column": 2
+      },
+      "end": {
+        "line": 69,
+        "column": 15
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 84,
         "column": 0
       },
       "end": {
-        "line": 61,
+        "line": 92,
         "column": 6
       }
     },
     "uid-2": {
       "start": {
-        "line": 56,
+        "line": 85,
         "column": 2
       },
       "end": {
-        "line": 56,
+        "line": 85,
         "column": 58
       }
     },
     "uid-3": {
       "start": {
-        "line": 57,
+        "line": 86,
         "column": 2
       },
       "end": {
-        "line": 57,
+        "line": 86,
         "column": 59
       }
     },
     "uid-4": {
       "start": {
-        "line": 58,
+        "line": 87,
         "column": 2
       },
       "end": {
-        "line": 58,
+        "line": 87,
         "column": 29
       }
     },
     "uid-5": {
       "start": {
-        "line": 59,
+        "line": 88,
         "column": 2
       },
       "end": {
-        "line": 59,
+        "line": 88,
         "column": 48
       }
     },
     "uid-6": {
       "start": {
-        "line": 60,
+        "line": 89,
         "column": 2
       },
       "end": {
-        "line": 60,
+        "line": 89,
         "column": 42
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 90,
+        "column": 2
+      },
+      "end": {
+        "line": 90,
+        "column": 45
+      }
+    },
+    "uid-8": {
+      "start": {
+        "line": 91,
+        "column": 2
+      },
+      "end": {
+        "line": 91,
+        "column": 49
       }
     }
   }

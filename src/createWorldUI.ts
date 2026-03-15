@@ -43,6 +43,12 @@ export function showCreateWorldUI(
         <div id="cw-mode-group">
           <button id="cw-mode-kids" class="cw-mode active" data-mode="kids">Kids</button>
           <button id="cw-mode-filmmaker" class="cw-mode" data-mode="filmmaker">Filmmaker</button>
+          <button id="cw-mode-original" class="cw-mode" data-mode="original">Original</button>
+          <button id="cw-mode-ai-artist" class="cw-mode" data-mode="ai-artist">AI Artist</button>
+        </div>
+
+        <div id="cw-artist-input" style="display:none;width:100%">
+          <input id="cw-artist-text" type="text" placeholder="Describe a style or artist (leave blank for auto-detect)" />
         </div>
 
         <button id="cw-generate" disabled>Generate World</button>
@@ -124,7 +130,21 @@ export function showCreateWorldUI(
         font-size: 14px;
       }
       #cw-upload-btn:hover { background: #3a2a5e; }
-      #cw-mode-group { display: flex; gap: 8px; }
+      #cw-mode-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+      #cw-artist-text {
+        width: 100%;
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1px solid #7b2ff2;
+        background: #2a1a4e;
+        color: #fbbf24;
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        box-sizing: border-box;
+      }
+      #cw-artist-text::placeholder { color: #666; }
+      #cw-artist-text:focus { border-color: #fbbf24; }
       .cw-mode {
         background: #2a1a4e;
         color: #ccc;
@@ -305,11 +325,16 @@ export function showCreateWorldUI(
     });
 
     // -- Mode toggle --
+    const artistInputDiv = document.getElementById("cw-artist-input") as HTMLDivElement;
+    const artistTextInput = document.getElementById("cw-artist-text") as HTMLInputElement;
+
     modeButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
         modeButtons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         selectedMode = btn.dataset.mode || "kids";
+        // Show artist text input only for ai-artist mode
+        artistInputDiv.style.display = selectedMode === "ai-artist" ? "block" : "none";
       });
     });
 
@@ -338,7 +363,7 @@ export function showCreateWorldUI(
         stageLabel.textContent = "Starting generation...";
         barFill.style.width = "10%";
 
-        const worldId = await generateWorld(apiBase, blob, selectedMode);
+        const worldId = await generateWorld(apiBase, blob, selectedMode, artistTextInput.value.trim());
 
         const assets = await pollWorldStatus(apiBase, worldId, (stage, progress) => {
           stageLabel.textContent = stage;

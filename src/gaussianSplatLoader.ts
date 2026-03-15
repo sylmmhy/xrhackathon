@@ -33,6 +33,7 @@ export const GaussianSplatLoader = createComponent("GaussianSplatLoader", {
   animate: { type: Types.Boolean, default: false },
   enableLod: { type: Types.Boolean, default: true },
   lodSplatScale: { type: Types.Float32, default: 1.0 },
+  autoFit: { type: Types.Boolean, default: false },
 });
 
 
@@ -171,6 +172,7 @@ export class GaussianSplatLoaderSystem extends createSystem({
       url: splatUrl,
       lod: enableLod || undefined,
     });
+
     const timeout = new Promise<never>((_, reject) => {
       setTimeout(
         () =>
@@ -184,26 +186,40 @@ export class GaussianSplatLoaderSystem extends createSystem({
     });
     await Promise.race([splat.initialized, timeout]);
 
-    // Auto-center and scale: Marble worlds can have huge extents
-    // (e.g. 0–16384) with the camera at origin. Move the splat so its
-    // bounding-box center aligns with the camera and scale to fit.
-    const bbox = splat.getBoundingBox(true);
-    const center = new THREE.Vector3();
-    const size = new THREE.Vector3();
-    bbox.getCenter(center);
-    bbox.getSize(size);
-    const maxExtent = Math.max(size.x, size.y, size.z);
-    const targetSize = 20; // desired scene diameter in world units
-    if (maxExtent > targetSize) {
-      const s = targetSize / maxExtent;
-      splat.scale.setScalar(s);
-      // After scaling, the center moves by scale factor
-      splat.position.set(-center.x * s, -center.y * s + 1.5, -center.z * s);
+    // Auto-fit for non-default splats (e.g. Marble exports).
+    // Default splat (disney_castle) renders correctly as-is; only apply
+    // coordinate conversion + auto-center/scale to switched-in worlds.
+    const needsAutoFit = entity.getValue(
+      GaussianSplatLoader,
+      "autoFit",
+    ) as boolean;
+
+    if (needsAutoFit) {
+      // SparkJS best practice: 180° X rotation (OpenCV → OpenGL coords)
+      splat.quaternion.set(1, 0, 0, 0);
+
+      const bbox = splat.getBoundingBox(true);
+      const center = new THREE.Vector3();
+      const size = new THREE.Vector3();
+      bbox.getCenter(center);
+      bbox.getSize(size);
+      const maxExtent = Math.max(size.x, size.y, size.z);
+      const targetSize = 20;
+      const camY = 1.5;
+
+      if (maxExtent > targetSize) {
+        const s = targetSize / maxExtent;
+        splat.scale.setScalar(s);
+        // With quaternion (1,0,0,0), local (lx,ly,lz) → world (s*lx, -s*ly, -s*lz) + pos
+        // Place camera at ~35% from scene bottom (eye level) instead of center
+        const yOffset = size.y * s * 0.15;
+        splat.position.set(-center.x * s, center.y * s + camY - yOffset, center.z * s);
+      }
+      console.log(
+        `[GaussianSplatLoader] autoFit: center=(${center.x.toFixed(1)}, ${center.y.toFixed(1)}, ${center.z.toFixed(1)})` +
+          ` size=(${size.x.toFixed(1)}, ${size.y.toFixed(1)}, ${size.z.toFixed(1)}) scale=${(targetSize / maxExtent).toFixed(6)}`,
+      );
     }
-    console.log(
-      `[GaussianSplatLoader] bbox center=(${center.x.toFixed(1)}, ${center.y.toFixed(1)}, ${center.z.toFixed(1)})` +
-        ` size=(${size.x.toFixed(1)}, ${size.y.toFixed(1)}, ${size.z.toFixed(1)}) maxExtent=${maxExtent.toFixed(1)}`,
-    );
 
     let collider: THREE.Group | null = null;
     if (meshUrl) {

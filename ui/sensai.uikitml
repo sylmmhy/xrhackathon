@@ -52,6 +52,35 @@
     text-align: center;
     cursor: pointer;
   }
+
+  #rain-button {
+    width: 100%;
+    padding: 1.5;
+    margin-top: 1;
+    background-color: #7b2ff2;
+    color: #fbbf24;
+    border-radius: 1.5;
+    border-width: 0;
+    font-size: 2.5;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  #world-button {
+    width: 100%;
+    padding: 1.5;
+    margin-top: 1;
+    background-color: #1a1a3e;
+    color: #c4b5fd;
+    border-color: #7b2ff2;
+    border-width: 0.15;
+    border-radius: 1.5;
+    font-size: 2.5;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+  }
 </style>
 <div class="panel-container">
   <img src="/SensAI-logo.png" alt="SensAI" class="logo" />
@@ -59,4 +88,6 @@
   <div class="divider"></div>
   <span class="event-line">sensaihack.com</span>
   <button id="xr-button">Enter XR</button>
+  <button id="rain-button">Rain Toys</button>
+  <button id="world-button">Switch World</button>
 </div>

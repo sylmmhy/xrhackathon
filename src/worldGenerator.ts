@@ -15,10 +15,14 @@ export async function generateWorld(
   apiBase: string,
   drawing: Blob,
   mode: string,
+  artistPrompt?: string,
 ): Promise<string> {
   const formData = new FormData();
   formData.append("drawing", drawing, "drawing.png");
   formData.append("mode", mode);
+  if (artistPrompt) {
+    formData.append("artist_prompt", artistPrompt);
+  }
 
   const resp = await fetch(`${apiBase}/api/generate`, {
     method: "POST",

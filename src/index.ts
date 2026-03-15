@@ -1,6 +1,7 @@
 
 import * as THREE from "three";
 import {
+  Entity,
   EnvironmentType,
   Interactable,
   LocomotionEnvironment,
@@ -28,6 +29,7 @@ import { DeviceOrientationCamera } from "./deviceOrientationCamera.js";
 import { createTouchGrabController } from "./touchGrabController.js";
 import { createTouchLocomotion } from "./touchLocomotion.js";
 import { GrabPhysicsSystem } from "./grabPhysicsSystem.js";
+import { PlayerPushSystem } from "./playerPushSystem.js";
 import { createVoiceCommandUI } from "./voiceCommand.js";
 // rainToys is now triggered from the panel UI button
 
@@ -63,7 +65,8 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     world
       .registerSystem(PanelSystem)
       .registerSystem(GaussianSplatLoaderSystem)
-      .registerSystem(GrabPhysicsSystem);
+      .registerSystem(GrabPhysicsSystem)
+      .registerSystem(PlayerPushSystem);
 
 
     // ------------------------------------------------------------
@@ -85,10 +88,16 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
     // Listen for world switch from panel UI
     globalThis.addEventListener("switch-world", async (e) => {
-      const { splatUrl } = (e as CustomEvent).detail;
+      const { splatUrl, autoFit, position } = (e as CustomEvent).detail;
       try {
         await splatSystem.unload(splatEntity, { animate: true });
         splatEntity.setValue(GaussianSplatLoader, "splatUrl", splatUrl);
+        splatEntity.setValue(GaussianSplatLoader, "autoFit", !!autoFit);
+        if (position && splatEntity.object3D) {
+          splatEntity.object3D.position.set(position[0], position[1], position[2]);
+        } else if (splatEntity.object3D) {
+          splatEntity.object3D.position.set(0, 0, 0);
+        }
         await splatSystem.load(splatEntity, { animate: true });
       } catch (err) {
         console.error("[World] Failed to switch world:", err);
@@ -240,13 +249,23 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       splatEntity.setValue(GaussianSplatLoader, "splatUrl", directSplat);
       splatSystem.load(splatEntity, { animate: true })
         .then(async () => {
-          // Load GLB model (default: alligator)
+          // Load GLB models
           const testGlb = params.get("glb") || "./SM_Aligator.glb";
           if (testGlb) {
             spawnGLBFromUrl(world, testGlb).catch((err) =>
               console.error("[World] Failed to load test GLB:", err),
             );
           }
+
+          // Gothic Fox – placed to the left
+          spawnGLBFromUrl(world, "./GothicFox.glb", new THREE.Vector3(-1.5, 0.5, -2)).catch((err) =>
+            console.error("[World] Failed to load GothicFox:", err),
+          );
+
+          // Cute Fox – placed to the right
+          spawnGLBFromUrl(world, "./CuteFox.glb", new THREE.Vector3(1.5, 0.5, -2)).catch((err) =>
+            console.error("[World] Failed to load CuteFox:", err),
+          );
 
           // Use existing world_id or create one via test endpoint for Meshy upload
           let splatWorldId: string = worldId || "";

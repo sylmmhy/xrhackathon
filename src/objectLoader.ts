@@ -79,16 +79,16 @@ export async function spawnGLBFromUrl(
     })
     .addComponent(PhysicsBody, {
       state: PhysicsState.Dynamic,
-      linearDamping: 0.5,
-      angularDamping: 0.5,
-      gravityFactor: 1.0,
+      linearDamping: 0.4,
+      angularDamping: 0.3,
+      gravityFactor: 0.8,
     })
     .addComponent(PhysicsShape, {
       shape: PhysicsShapeType.Box,
       dimensions: [scaledSize.x, scaledSize.y, scaledSize.z],
-      density: 3.0,
-      friction: 0.9,
-      restitution: 0.1,
+      density: 0.3,
+      friction: 0.5,
+      restitution: 0.5,
     });
 
   console.log("[objectLoader] Spawned GLB:", glbUrl);
