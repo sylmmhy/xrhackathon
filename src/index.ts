@@ -230,12 +230,12 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .addComponent(ScreenSpace, {
         top: "30%",
         bottom: "30%",
-        left: "30%",
-        right: "30%",
+        left: "5%",
+        right: "55%",
         height: "40%",
         width: "40%",
       });
-    panelEntity.object3D!.position.set(0, 1.29, -1.9);
+    panelEntity.object3D!.position.set(-1.2, 1.29, -1.9);
 
 
     // ------------------------------------------------------------
