@@ -171,10 +171,12 @@ export class PanelSystem extends createSystem({
           domBtn.textContent = "View World";
           domBtn.style.cssText = `
             position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-            z-index:10002; padding:18px 56px; border:none; border-radius:14px;
-            background:#fbbf24; color:#1a1a2e; font-size:22px; font-weight:700;
+            z-index:10002; padding:18px 56px; border:1px solid rgba(255,255,255,0.25);
+            border-radius:18px;
+            background:rgba(255,255,255,0.12); backdrop-filter:blur(20px);
+            color:#fff; font-size:22px; font-weight:700;
             cursor:pointer; font-family:-apple-system,sans-serif;
-            box-shadow:0 4px 24px rgba(0,0,0,0.5);
+            box-shadow:0 8px 32px rgba(0,0,0,0.3);
           `;
           globalThis.document.body.appendChild(domBtn);
 
@@ -230,7 +232,7 @@ export class PanelSystem extends createSystem({
         let currentWorldIndex = 0;
         let switching = false;
 
-        worldButton.setProperties({ text: `World: ${worlds[0].name}` });
+        worldButton.setProperties({ text: worlds[0].name });
 
         worldButton.addEventListener("click", () => {
           if (switching) return;
@@ -246,7 +248,7 @@ export class PanelSystem extends createSystem({
           // Listen for completion
           const onDone = () => {
             switching = false;
-            worldButton.setProperties({ text: `World: ${next.name}` });
+            worldButton.setProperties({ text: next.name });
             globalThis.removeEventListener("switch-world-done", onDone);
           };
           globalThis.addEventListener("switch-world-done", onDone);

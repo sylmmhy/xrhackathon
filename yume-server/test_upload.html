@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yume — Pipeline Test</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; padding: 2rem; }
+  h1 { text-align: center; margin-bottom: 0.5rem; color: #e0c3fc; }
+  .subtitle { text-align: center; color: #666; margin-bottom: 2rem; font-size: 0.9rem; }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  .upload-section { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+  .drop-zone { border: 3px dashed #555; border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; position: relative; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: #e0c3fc; background: #e0c3fc11; }
+  .drop-zone.has-file { border-color: #4ade80; border-style: solid; }
+  .drop-zone input { display: none; }
+  .drop-zone .zone-label { font-size: 1.1rem; font-weight: 600; color: #e0c3fc; margin-bottom: 0.5rem; }
+  .drop-zone .zone-hint { font-size: 0.9rem; color: #666; }
+  .drop-zone .zone-preview { max-width: 200px; max-height: 150px; border-radius: 8px; margin-top: 0.8rem; }
+  .drop-zone .zone-filename { color: #4ade80; font-size: 0.85rem; margin-top: 0.5rem; }
+  .drop-zone .zone-clear { position: absolute; top: 8px; right: 12px; background: none; border: none; color: #888; font-size: 1.2rem; cursor: pointer; }
+  .drop-zone .zone-clear:hover { color: #ff6b6b; }
+  .drop-zone.plushie-zone { border-color: #444; }
+  .drop-zone.plushie-zone .zone-label { color: #fbbf24; }
+  .drop-zone.plushie-zone.has-file { border-color: #fbbf24; }
+  .drop-zone.plushie-zone .zone-filename { color: #fbbf24; }
+
+  .go-btn { display: block; width: 100%; padding: 1rem; font-size: 1.2rem; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; background: linear-gradient(135deg, #7c3aed, #e0c3fc); color: #fff; transition: all 0.2s; margin-bottom: 1.5rem; }
+  .go-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,58,237,0.4); }
+  .go-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .status-bar { background: #16213e; border-radius: 12px; padding: 1.2rem 1.5rem; margin-bottom: 1.5rem; font-size: 1.1rem; }
+  .status-bar .stage { color: #e0c3fc; font-weight: 600; }
+  .status-bar .label { color: #999; margin-left: 0.5rem; }
+  .status-bar .time { float: right; color: #666; }
+  .status-bar .plushie-label { display: block; margin-top: 0.4rem; color: #fbbf24; font-size: 0.9rem; }
+  .error { color: #ff6b6b; }
+  .hidden { display: none; }
+
+  .results { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .result-card { background: #16213e; border-radius: 12px; padding: 1.5rem; }
+  .result-card h3 { margin-bottom: 0.8rem; color: #e0c3fc; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .result-card.plushie-card h3 { color: #fbbf24; }
+  .result-card img { width: 100%; border-radius: 8px; background: #111; min-height: 150px; }
+  .asset-links { margin-top: 1rem; font-size: 0.85rem; }
+  .asset-links a { color: #7ec8e3; text-decoration: none; display: block; margin: 0.3rem 0; word-break: break-all; }
+  .asset-links a:hover { text-decoration: underline; }
+  .asset-links a.download-btn { display: inline-block; padding: 0.4rem 0.8rem; background: #7ec8e322; border: 1px solid #7ec8e3; border-radius: 6px; margin: 0.3rem 0.3rem 0.3rem 0; }
+
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 3px solid #555; border-top-color: #e0c3fc; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 0.5rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 700px) {
+    .upload-section { grid-template-columns: 1fr; }
+    .results { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Yume</h1>
+  <p class="subtitle">Drawing to 3D World + Plushie Pipeline Test</p>
+
+  <div class="upload-section">
+    <div class="drop-zone" id="drawingZone">
+      <input type="file" id="drawingInput" accept="image/*">
+      <div class="zone-label">Drawing (required)</div>
+      <div class="zone-hint">Drop a drawing here or click to upload</div>
+    </div>
+    <div class="drop-zone plushie-zone" id="plushieZone">
+      <input type="file" id="plushieInput" accept="image/*">
+      <div class="zone-label">Plushie Photo (optional)</div>
+      <div class="zone-hint">Drop a plushie photo to generate a 3D model</div>
+    </div>
+  </div>
+
+  <button class="go-btn" id="goBtn" disabled>Upload a drawing to start</button>
+
+  <div class="status-bar hidden" id="statusBar">
+    <span class="spinner" id="statusSpinner"></span>
+    <span class="stage" id="statusStage"></span>
+    <span class="label" id="statusLabel"></span>
+    <span class="time" id="statusTime"></span>
+    <span class="plushie-label hidden" id="plushieLabel"></span>
+  </div>
+
+  <div class="results hidden" id="results">
+    <div class="result-card">
+      <h3>Original Drawing</h3>
+      <img id="imgOriginal" src="" alt="Original drawing">
+    </div>
+    <div class="result-card">
+      <h3>Styled Image (Fal AI FLUX 2 Pro)</h3>
+      <img id="imgStyled" src="" alt="Styled image">
+    </div>
+    <div class="result-card">
+      <h3>Panorama (Marble 3D World)</h3>
+      <img id="imgPanorama" src="" alt="Panorama">
+    </div>
+    <div class="result-card">
+      <h3>Thumbnail</h3>
+      <img id="imgThumbnail" src="" alt="Thumbnail">
+      <div class="asset-links" id="worldAssetLinks"></div>
+    </div>
+    <div class="result-card plushie-card hidden" id="plushieResultCard">
+      <h3>Plushie Photo</h3>
+      <img id="imgPlushie" src="" alt="Plushie photo">
+      <div class="asset-links" id="plushieAssetLinks"></div>
+    </div>
+    <div class="result-card plushie-card hidden" id="plushieStyledCard">
+      <h3>Plushie Styled (Fal AI)</h3>
+      <img id="imgPlushieStyled" src="" alt="Styled plushie">
+    </div>
+    <div class="result-card plushie-card hidden" id="plushieThumbnailCard">
+      <h3>Plushie 3D Model (Meshy AI)</h3>
+      <img id="imgPlushieThumbnail" src="" alt="Plushie 3D thumbnail">
+    </div>
+  </div>
+</div>
+
+<script>
+function resolveApiBase() {
+  const { protocol, hostname, origin } = window.location;
+  if (protocol === 'file:' || !origin || origin === 'null') return 'http://localhost:8000';
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:8000';
+  return origin;
+}
+
+function buildApiHeaders(existingHeaders) {
+  const headers = new Headers(existingHeaders || {});
+  if (/ngrok/i.test(API)) {
+    headers.set('ngrok-skip-browser-warning', 'true');
+  }
+  return headers;
+}
+
+function apiFetch(path, options = {}) {
+  return fetch(`${API}${path}`, {
+    ...options,
+    headers: buildApiHeaders(options.headers),
+  });
+}
+
+const API = resolveApiBase();
+let drawingFile = null;
+let plushieFile = null;
+
+// --- Drop zone setup ---
+function setupDropZone(zoneId, inputId, onFile) {
+  const zone = document.getElementById(zoneId);
+  const input = document.getElementById(inputId);
+
+  zone.addEventListener('click', (e) => {
+    if (e.target.classList.contains('zone-clear')) return;
+    input.click();
+  });
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) onFile(e.dataTransfer.files[0], zone);
+  });
+  input.addEventListener('change', () => {
+    if (input.files.length) onFile(input.files[0], zone);
+  });
+}
+
+function showPreview(file, zone) {
+  // Clear old preview
+  zone.querySelectorAll('.zone-preview, .zone-filename, .zone-clear').forEach(el => el.remove());
+
+  zone.classList.add('has-file');
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.createElement('img');
+    img.src = e.target.result;
+    img.className = 'zone-preview';
+    zone.appendChild(img);
+  };
+  reader.readAsDataURL(file);
+
+  const name = document.createElement('div');
+  name.className = 'zone-filename';
+  name.textContent = file.name;
+  zone.appendChild(name);
+
+  const clear = document.createElement('button');
+  clear.className = 'zone-clear';
+  clear.textContent = '\u00d7';
+  clear.addEventListener('click', (e) => {
+    e.stopPropagation();
+    zone.querySelectorAll('.zone-preview, .zone-filename, .zone-clear').forEach(el => el.remove());
+    zone.classList.remove('has-file');
+    if (zone.id === 'drawingZone') { drawingFile = null; }
+    else { plushieFile = null; }
+    updateGoBtn();
+  });
+  zone.appendChild(clear);
+}
+
+setupDropZone('drawingZone', 'drawingInput', (file, zone) => {
+  drawingFile = file;
+  showPreview(file, zone);
+  updateGoBtn();
+});
+
+setupDropZone('plushieZone', 'plushieInput', (file, zone) => {
+  plushieFile = file;
+  showPreview(file, zone);
+  updateGoBtn();
+});
+
+function updateGoBtn() {
+  const btn = document.getElementById('goBtn');
+  if (!drawingFile) {
+    btn.disabled = true;
+    btn.textContent = 'Upload a drawing to start';
+  } else if (plushieFile) {
+    btn.disabled = false;
+    btn.textContent = 'Generate World + Plushie 3D Model';
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Generate World';
+  }
+}
+
+document.getElementById('goBtn').addEventListener('click', () => {
+  if (drawingFile) runPipeline();
+});
+
+// --- Pipeline ---
+async function runPipeline() {
+  const statusBar = document.getElementById('statusBar');
+  const results = document.getElementById('results');
+  const plushieLabel = document.getElementById('plushieLabel');
+  const plushieResultCard = document.getElementById('plushieResultCard');
+  const plushieStyledCard = document.getElementById('plushieStyledCard');
+  const plushieThumbnailCard = document.getElementById('plushieThumbnailCard');
+  statusBar.classList.remove('hidden');
+  results.classList.add('hidden');
+  plushieResultCard.classList.add('hidden');
+  plushieStyledCard.classList.add('hidden');
+  plushieThumbnailCard.classList.add('hidden');
+  plushieLabel.classList.add('hidden');
+  document.getElementById('imgPlushie').src = '';
+  document.getElementById('imgPlushieStyled').src = '';
+  document.getElementById('imgPlushieThumbnail').src = '';
+  document.getElementById('statusSpinner').style.display = 'inline-block';
+  document.getElementById('goBtn').disabled = true;
+
+  // Show drawing preview immediately
+  const drawReader = new FileReader();
+  drawReader.onload = e => { document.getElementById('imgOriginal').src = e.target.result; };
+  drawReader.readAsDataURL(drawingFile);
+
+  // Build form data
+  const formData = new FormData();
+  formData.append('drawing', drawingFile);
+  formData.append('mode', 'kids');
+  if (plushieFile) {
+    formData.append('plushie', plushieFile);
+  }
+
+  const startTime = Date.now();
+  updateStatus('Uploading', 'Sending to server...', startTime);
+
+  try {
+    const genRes = await apiFetch('/api/generate', { method: 'POST', body: formData });
+    const genData = await genRes.json();
+    if (!genRes.ok) throw new Error(genData.error || 'Upload failed');
+
+    const worldId = genData.world_id;
+    updateStatus('Submitted', `World ID: ${worldId}`, startTime);
+
+    // Poll
+    while (true) {
+      await sleep(2000);
+      const statusRes = await apiFetch(`/api/world/${worldId}/status`);
+      const statusData = await statusRes.json();
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
+
+      updateStatus(
+        `Stage ${statusData.stage}/${statusData.total_stages}`,
+        statusData.stage_label,
+        startTime
+      );
+
+      // Show plushie sub-status if applicable
+      if (statusData.plushie_status) {
+        plushieLabel.classList.remove('hidden');
+        const plushieMap = {
+          pending: 'Plushie: waiting...',
+          generating: 'Plushie: generating 3D model...',
+          complete: 'Plushie: 3D model ready!',
+          failed: 'Plushie: generation failed'
+        };
+        plushieLabel.textContent = plushieMap[statusData.plushie_status] || `Plushie: ${statusData.plushie_status}`;
+      }
+
+      if (statusData.status === 'complete') {
+        document.getElementById('statusSpinner').style.display = 'none';
+        updateStatus('Complete!', `Pipeline finished in ${elapsed}s`, startTime);
+
+        const assetsRes = await apiFetch(`/api/world/${worldId}/assets`);
+        const assets = await assetsRes.json();
+        showResults(assets, worldId);
+        break;
+      }
+      if (statusData.status === 'failed') {
+        document.getElementById('statusSpinner').style.display = 'none';
+        updateStatus('Failed', statusData.error || 'Unknown error', startTime);
+        document.getElementById('statusStage').classList.add('error');
+        break;
+      }
+    }
+  } catch (err) {
+    document.getElementById('statusSpinner').style.display = 'none';
+    updateStatus('Error', err.message, startTime);
+    document.getElementById('statusStage').classList.add('error');
+  }
+
+  document.getElementById('goBtn').disabled = false;
+  updateGoBtn();
+}
+
+function updateStatus(stage, label, startTime) {
+  document.getElementById('statusStage').textContent = stage;
+  document.getElementById('statusStage').classList.remove('error');
+  document.getElementById('statusLabel').textContent = label;
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(0);
+  document.getElementById('statusTime').textContent = `${elapsed}s`;
+}
+
+function showResults(assets, worldId) {
+  const results = document.getElementById('results');
+  const plushieResultCard = document.getElementById('plushieResultCard');
+  const plushieStyledCard = document.getElementById('plushieStyledCard');
+  const plushieThumbnailCard = document.getElementById('plushieThumbnailCard');
+  results.classList.remove('hidden');
+  plushieResultCard.classList.add('hidden');
+  plushieStyledCard.classList.add('hidden');
+  plushieThumbnailCard.classList.add('hidden');
+
+  if (assets.original_drawing) document.getElementById('imgOriginal').src = API + assets.original_drawing;
+  if (assets.styled_image) document.getElementById('imgStyled').src = API + assets.styled_image;
+  if (assets.panorama_url) document.getElementById('imgPanorama').src = API + assets.panorama_url;
+  if (assets.thumbnail_url) document.getElementById('imgThumbnail').src = API + assets.thumbnail_url;
+
+  // World asset links
+  const worldLinks = document.getElementById('worldAssetLinks');
+  worldLinks.innerHTML = '<strong>World Assets:</strong>';
+  const worldKeys = ['splat_url', 'collider_url', 'panorama_url', 'thumbnail_url', 'styled_image'];
+  for (const key of worldKeys) {
+    if (assets[key]) {
+      worldLinks.innerHTML += `<a class="download-btn" href="${API}${assets[key]}" target="_blank" download>${key.replace(/_url$/, '').replace(/_/g, ' ')}</a>`;
+    }
+  }
+
+  // Plushie results
+  if (assets.plushie_photo_url) {
+    plushieResultCard.classList.remove('hidden');
+    document.getElementById('imgPlushie').src = API + assets.plushie_photo_url;
+
+    const plushieLinks = document.getElementById('plushieAssetLinks');
+    plushieLinks.innerHTML = '';
+
+    if (assets.plushie_glb_url) {
+      plushieLinks.innerHTML += `<a class="download-btn" href="${API}${assets.plushie_glb_url}" target="_blank" download>Download GLB</a>`;
+    }
+    if (assets.plushie_fbx_url) {
+      plushieLinks.innerHTML += `<a class="download-btn" href="${API}${assets.plushie_fbx_url}" target="_blank" download>Download FBX</a>`;
+    }
+    if (!assets.plushie_glb_url && !assets.plushie_fbx_url) {
+      plushieLinks.innerHTML = '<span style="color:#ff6b6b">Plushie 3D generation failed</span>';
+    }
+
+    if (assets.plushie_styled_url) {
+      plushieStyledCard.classList.remove('hidden');
+      document.getElementById('imgPlushieStyled').src = API + assets.plushie_styled_url;
+    }
+
+    if (assets.plushie_thumbnail_url) {
+      plushieThumbnailCard.classList.remove('hidden');
+      document.getElementById('imgPlushieThumbnail').src = API + assets.plushie_thumbnail_url;
+    }
+  }
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>

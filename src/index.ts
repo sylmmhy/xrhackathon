@@ -223,17 +223,17 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .createTransformEntity()
       .addComponent(PanelUI, {
         config: "./ui/sensai.json",
-        maxHeight: 0.8,
-        maxWidth: 1.6,
+        maxHeight: 0.45,
+        maxWidth: 0.7,
       })
       .addComponent(Interactable)
       .addComponent(ScreenSpace, {
         top: "30%",
         bottom: "30%",
-        left: "5%",
-        right: "55%",
+        left: "2%",
+        right: "76%",
         height: "40%",
-        width: "40%",
+        width: "22%",
       });
     panelEntity.object3D!.position.set(-1.2, 1.29, -1.9);
 
