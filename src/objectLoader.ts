@@ -34,12 +34,12 @@ export async function spawnGLBFromUrl(
   URL.revokeObjectURL(blobUrl);
   const model = gltf.scene;
 
-  // Auto-scale to ~0.5m
+  // Auto-scale to ~1m
   const box = new THREE.Box3().setFromObject(model);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
   if (maxDim > 0) {
-    const scale = 0.5 / maxDim;
+    const scale = 1.0 / maxDim;
     model.scale.multiplyScalar(scale);
   }
 
@@ -49,6 +49,8 @@ export async function spawnGLBFromUrl(
   } else {
     const cam = world.camera;
     const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+    dir.y = 0;
+    dir.normalize();
     model.position.copy(cam.position).addScaledVector(dir, 2);
   }
 

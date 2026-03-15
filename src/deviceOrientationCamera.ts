@@ -7,6 +7,8 @@ import * as THREE from "three";
 export class DeviceOrientationCamera {
   private camera: THREE.Camera;
   private enabled = false;
+  /** External flag — set to false to pause updates (e.g. when entering VR). */
+  public active = true;
   private alpha = 0;
   private beta = 0;
   private gamma = 0;
@@ -53,7 +55,7 @@ export class DeviceOrientationCamera {
 
   /** Call in your render/update loop. */
   update() {
-    if (!this.enabled) return;
+    if (!this.enabled || !this.active) return;
 
     // Standard device orientation → camera quaternion conversion
     // See: https://w3c.github.io/deviceorientation/#worked-example

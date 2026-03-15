@@ -51,7 +51,7 @@ export default defineConfig({
     ...(process.env.SKIP_MKCERT ? [] : [mkcert()]),
     injectIWER({
       device: "metaQuest3",
-      activation: "localhost",
+      activation: "always",
       verbose: true,
     }),
     compileUIKit({ sourceDir: "ui", outputDir: "public/ui", verbose: true }),

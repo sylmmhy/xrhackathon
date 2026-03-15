@@ -130,22 +130,58 @@ export class PanelSystem extends createSystem({
         });
       };
 
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
       // Keep the panel in non-XR mode when immersive sessions are unavailable.
-      if (!navigator.xr) {
+      const xrCheck = navigator.xr
+        ? navigator.xr
+            .isSessionSupported("immersive-vr")
+            .catch(() => false)
+        : Promise.resolve(false);
+
+      xrCheck.then((supported) => {
+        xrSupported = !!supported;
         updateButtonText(this.world.visibilityState.value);
-      } else {
-        navigator.xr
-          .isSessionSupported("immersive-vr")
-          .then((supported) => {
-            xrSupported = supported;
-            updateButtonText(this.world.visibilityState.value);
-          })
-          .catch((err) => {
-            xrSupported = false;
-            console.warn("[Panel] Failed to detect XR support:", err);
-            updateButtonText(this.world.visibilityState.value);
+
+        // No XR support: the 3D panel can't receive input
+        // (IWSDK UIKit buttons need XR controller rays or IWER).
+        // On localhost IWER handles it; elsewhere hide panel + show DOM button.
+        const isLocalhost = globalThis.location.hostname === "localhost"
+          || globalThis.location.hostname === "127.0.0.1";
+
+        if (!xrSupported && !isLocalhost) {
+          // Aggressively hide the 3D panel — IWSDK may re-enable it
+          const forceHide = () => {
+            if (entity.object3D) {
+              entity.object3D.visible = false;
+              entity.object3D.scale.set(0, 0, 0);
+            }
+          };
+          forceHide();
+          // Retry for 30 frames in case IWSDK rebuilds/re-shows the panel
+          let hideAttempts = 0;
+          const keepHidden = () => {
+            forceHide();
+            if (++hideAttempts < 30) requestAnimationFrame(keepHidden);
+          };
+          requestAnimationFrame(keepHidden);
+
+          const domBtn = globalThis.document.createElement("button");
+          domBtn.textContent = "View World";
+          domBtn.style.cssText = `
+            position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+            z-index:10002; padding:18px 56px; border:none; border-radius:14px;
+            background:#fbbf24; color:#1a1a2e; font-size:22px; font-weight:700;
+            cursor:pointer; font-family:-apple-system,sans-serif;
+            box-shadow:0 4px 24px rgba(0,0,0,0.5);
+          `;
+          globalThis.document.body.appendChild(domBtn);
+
+          domBtn.addEventListener("click", () => {
+            domBtn.remove();
           });
-      }
+        }
+      });
 
       xrButton.addEventListener("click", async () => {
         if (!xrSupported) {

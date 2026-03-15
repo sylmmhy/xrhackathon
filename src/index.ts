@@ -21,6 +21,8 @@ import { loadExistingObjects, spawnGLBFromUrl } from "./objectLoader.js";
 import { showCreateWorldUI } from "./createWorldUI.js";
 import { fetchWorldAssets, type WorldAssets } from "./worldGenerator.js";
 import { DeviceOrientationCamera } from "./deviceOrientationCamera.js";
+import { createTouchGrabController } from "./touchGrabController.js";
+import { createTouchLocomotion } from "./touchLocomotion.js";
 
 
 // ------------------------------------------------------------
@@ -43,10 +45,13 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     sceneUnderstanding: false,
   },
 })
-  .then((world) => {
+  .then(async (world) => {
     world.camera.position.set(0, 1.5, 0);
     world.scene.background = new THREE.Color(0x000000);
     world.scene.add(new THREE.AmbientLight(0xffffff, 1.0));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    dirLight.position.set(5, 10, 5);
+    world.scene.add(dirLight);
 
     world
       .registerSystem(PanelSystem)
@@ -95,15 +100,26 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
 
     // ------------------------------------------------------------
-    // Mobile: gyroscope camera + update loop
+    // Mobile: gyroscope camera + touch grab/locomotion
     // ------------------------------------------------------------
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    let orientationCam: DeviceOrientationCamera | null = null;
+    const hasXR = await navigator.xr
+      ?.isSessionSupported("immersive-vr")
+      .catch(() => false);
 
-    if (isMobile) {
+    let orientationCam: DeviceOrientationCamera | null = null;
+    let touchGrab: ReturnType<typeof createTouchGrabController> | null = null;
+    let touchLoco: ReturnType<typeof createTouchLocomotion> | null = null;
+
+    if (isMobile && !hasXR) {
+      // --- Touch grab + locomotion (non-XR mobile only) ---
+      const sceneContainer = document.getElementById("scene-container")!;
+      touchGrab = createTouchGrabController(world.camera, world.scene, sceneContainer);
+      touchLoco = createTouchLocomotion(world.camera, sceneContainer);
+
+      // --- Gyroscope ---
       orientationCam = new DeviceOrientationCamera(world.camera);
 
-      // iOS requires user gesture to request permission
       const enableBtn = document.createElement("button");
       enableBtn.textContent = "Enable Gyroscope";
       enableBtn.style.cssText = `
@@ -119,13 +135,25 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         enableBtn.remove();
         if (!ok) console.warn("[Mobile] Gyroscope permission denied");
       });
-    }
 
-    // Update loop for gyroscope
-    if (isMobile) {
+      // Pause gyroscope if the user ever enters VR (e.g. via WebXR on a future device)
+      world.visibilityState.subscribe((state) => {
+        if (orientationCam) {
+          orientationCam.active = state === VisibilityState.NonImmersive;
+        }
+      });
+
+      // Update loop for gyroscope + touch locomotion
+      let prevTime = performance.now();
       const animate = () => {
         requestAnimationFrame(animate);
+        const now = performance.now();
+        const delta = (now - prevTime) / 1000;
+        prevTime = now;
+
         orientationCam?.update();
+        touchGrab?.update();
+        touchLoco?.update(delta);
       };
       animate();
     }
@@ -177,38 +205,40 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       await splatSystem.load(splatEntity, { animate: true });
     }
 
-    const directSplat = params.get("splat");
+    const directSplat = params.get("splat") || "./splats/disney_castle.spz";
 
     if (directSplat) {
       // Direct splat URL: load it immediately, skip create UI
       splatEntity.setValue(GaussianSplatLoader, "splatUrl", directSplat);
       splatSystem.load(splatEntity, { animate: true })
         .then(async () => {
-          // Use existing world_id or create one via test endpoint for Meshy
-          let splatWorldId: string = worldId || "";
-          if (!splatWorldId) {
-            try {
-              const resp = await fetch(`${apiBase}/api/test/create-world`, { method: "POST" });
-              const data = await resp.json();
-              splatWorldId = data.world_id;
-              // Update URL so refresh preserves the world_id
-              const newParams = new URLSearchParams(window.location.search);
-              newParams.set("world_id", splatWorldId);
-              history.replaceState(null, "", `${window.location.pathname}?${newParams}`);
-            } catch (err) {
-              console.warn("[World] Could not create world for Meshy:", err);
-              return;
-            }
-          }
-          createUploadUI(world, splatWorldId);
-          loadExistingObjects(world, splatWorldId, apiBase);
-
-          // Load test GLB model if present
-          const testGlb = params.get("glb");
+          // Load GLB model (default: alligator)
+          const testGlb = params.get("glb") || "./SM_Aligator.glb";
           if (testGlb) {
             spawnGLBFromUrl(world, testGlb).catch((err) =>
               console.error("[World] Failed to load test GLB:", err),
             );
+          }
+
+          // Use existing world_id or create one via test endpoint for Meshy upload
+          let splatWorldId: string = worldId || "";
+          if (!splatWorldId) {
+            try {
+              const resp = await fetch(`${apiBase}/api/test/create-world`, { method: "POST" });
+              if (resp.ok) {
+                const data = await resp.json();
+                splatWorldId = data.world_id;
+                const newParams = new URLSearchParams(window.location.search);
+                newParams.set("world_id", splatWorldId);
+                history.replaceState(null, "", `${window.location.pathname}?${newParams}`);
+              }
+            } catch (err) {
+              console.warn("[World] Could not create world for Meshy:", err);
+            }
+          }
+          if (splatWorldId) {
+            createUploadUI(world, splatWorldId);
+            loadExistingObjects(world, splatWorldId, apiBase);
           }
         })
         .catch((err) => {
