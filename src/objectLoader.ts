@@ -76,6 +76,13 @@ export async function spawnGLBFromUrl(
   const { scene, scaledSize } = await getCachedGLB(glbUrl);
   const model = scene.clone(true);
 
+  // Render toys on top of Gaussian splats (SparkRenderer uses renderOrder -10).
+  // A positive renderOrder ensures toys draw after splats; the Z buffer
+  // still handles correct occlusion for objects genuinely behind splats.
+  model.traverse((child) => {
+    child.renderOrder = 100;
+  });
+
   // Default position: 2m in front of camera at eye height
   if (position) {
     model.position.copy(position);
