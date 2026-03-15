@@ -219,7 +219,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       await splatSystem.load(splatEntity, { animate: true });
     }
 
-    const directSplat = params.get("splat") || "./splats/disney_castle.spz";
+    const directSplat = params.get("splat") || "./splats/world_500k_edit_6_4.splat";
 
     if (directSplat) {
       // Direct splat URL: load it immediately, skip create UI
