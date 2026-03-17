@@ -20,7 +20,6 @@ import {
 } from "@iwsdk/core";
 import { PanelSystem } from "./uiPanel.js";
 import { GaussianSplatLoader, GaussianSplatLoaderSystem,} from "./gaussianSplatLoader.js";
-import { spawnHologramSphere } from "./interactableExample.js";
 import { createUploadUI } from "./uploadUI.js";
 import { loadExistingObjects, spawnGLBFromUrl } from "./objectLoader.js";
 import { showCreateWorldUI } from "./createWorldUI.js";
@@ -133,16 +132,12 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         restitution: 0.3,
       });
 
-    const grid = new THREE.GridHelper(100, 100, 0x444444, 0x222222);
-    grid.material.transparent = true;
-    grid.material.opacity = 0.4;
-    world.scene.add(grid);
+
 
 
     // ------------------------------------------------------------
     // Hologram Sphere (distance-grabbable, translate in place)
     // ------------------------------------------------------------
-    spawnHologramSphere(world);
 
 
     // ------------------------------------------------------------
