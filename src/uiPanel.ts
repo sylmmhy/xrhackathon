@@ -252,6 +252,7 @@ export class PanelSystem extends createSystem({
           globalThis.addEventListener("switch-world-done", onDone);
         });
       }
+
     }, true);
   }
 }

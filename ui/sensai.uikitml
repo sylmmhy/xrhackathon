@@ -81,6 +81,7 @@
     text-align: center;
     cursor: pointer;
   }
+
 </style>
 <div class="panel-container">
   <img src="/SensAI-logo.png" alt="SensAI" class="logo" />

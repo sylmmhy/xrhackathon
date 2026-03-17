@@ -69,62 +69,64 @@ export function createVoiceCommandUI(
   const DEFAULT_PLUSH_GLB = "./SM_Aligator.glb";
   let cachedPlushGlbUrl: string | null = null;
   let listening = false;
+  let listenTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // --- Status display (visible in both flat + VR via DOM overlay) ---
-  const statusEl = document.createElement("div");
-  statusEl.id = "voice-status";
-  statusEl.style.cssText = `
-    position:fixed; top:16px; left:50%; transform:translateX(-50%);
-    z-index:10001; padding:10px 20px; border-radius:10px;
-    background:rgba(13,2,33,0.9); color:#fbbf24;
-    font-size:14px; font-family:-apple-system,sans-serif;
-    display:none; text-align:center; max-width:80vw;
+  // --- Voice UI panel ---
+  const panel = document.createElement("div");
+  panel.style.cssText = `
+    position:fixed; bottom:24px; left:24px; z-index:10000;
+    font-family:-apple-system,sans-serif;
+    display:flex; flex-direction:column; gap:8px; align-items:flex-start;
   `;
-  document.body.appendChild(statusEl);
+  document.body.appendChild(panel);
 
-  // --- Mic button (flat/desktop mode) ---
+  // Mic button
   const micBtn = document.createElement("button");
   micBtn.id = "voice-btn";
-  micBtn.textContent = "\u{1F3A4}";
+  micBtn.innerHTML = `🎤 <span style="font-size:13px;font-weight:600;">Voice</span>`;
   micBtn.style.cssText = `
-    position:fixed; bottom:24px; left:24px; z-index:10000;
-    width:56px; height:56px; border-radius:50%; border:none;
-    background:#7b2ff2; color:#fbbf24; font-size:24px;
+    display:flex; align-items:center; gap:6px;
+    padding:10px 18px; border-radius:24px; border:none;
+    background:#7b2ff2; color:#fbbf24; font-size:20px;
     cursor:pointer; box-shadow:0 4px 12px rgba(123,47,242,0.4);
-    transition:transform 0.15s, background 0.15s;
+    transition:background 0.15s;
   `;
-  document.body.appendChild(micBtn);
+  panel.appendChild(micBtn);
+
+  // Hints panel (shown always)
+  const hintsEl = document.createElement("div");
+  hintsEl.style.cssText = `
+    background:rgba(13,2,33,0.85); color:#fff;
+    border-radius:10px; padding:10px 14px;
+    font-size:12px; line-height:1.7;
+    border:1px solid rgba(251,191,36,0.2);
+  `;
+  hintsEl.innerHTML = `
+    <div style="color:#fbbf24;font-weight:700;margin-bottom:4px;">🎙 Voice Commands</div>
+    <div>🌧 <b>"rain"</b> / "fall" / "drop"</div>
+  `;
+  panel.appendChild(hintsEl);
+
+  // Transcript display (shown when listening or after result)
+  const statusEl = document.createElement("div");
+  statusEl.style.cssText = `
+    background:rgba(13,2,33,0.95); color:#fbbf24;
+    border-radius:10px; padding:10px 14px; font-size:13px;
+    border:1px solid #7b2ff2; display:none; min-width:180px;
+  `;
+  panel.appendChild(statusEl);
 
   // --- Voice actions ---
   const actions: VoiceAction[] = [
-    {
-      keywords: ["plush", "plushie", "teddy", "toy", "stuffed"],
-      cooldown: 10000,
-      lastFired: 0,
-      handler: async (transcript: string) => {
-        let count = 10;
-        if (/tons|lots|many|so many/.test(transcript)) count = 20;
-        if (/\bone\b|single/.test(transcript)) count = 1;
-        if (/few|some|couple/.test(transcript)) count = 5;
-
-        const glb = cachedPlushGlbUrl || DEFAULT_PLUSH_GLB;
-        statusEl.textContent = `Raining ${count} plushies!`;
-        statusEl.style.display = "block";
-        await rainObjects(world, glb, count);
-        statusEl.textContent = "Done!";
-        setTimeout(() => { statusEl.style.display = "none"; }, 2000);
-      },
-    },
     {
       keywords: ["rain", "fall", "drop", "shower"],
       cooldown: 5000,
       lastFired: 0,
       handler: async () => {
         const glb = cachedPlushGlbUrl || DEFAULT_PLUSH_GLB;
-        statusEl.textContent = "Object rain!";
+        statusEl.innerHTML = `🗣 <i>Raining toys!</i>`;
         statusEl.style.display = "block";
         await rainObjects(world, glb, 10);
-        statusEl.textContent = "Done!";
         setTimeout(() => { statusEl.style.display = "none"; }, 2000);
       },
     },
@@ -136,26 +138,44 @@ export function createVoiceCommandUI(
   recognition.interimResults = false;
   recognition.lang = "en-US";
 
+  function resetUI() {
+    listening = false;
+    micBtn.style.background = "#7b2ff2";
+    micBtn.innerHTML = `🎤 <span style="font-size:13px;font-weight:600;">Voice</span>`;
+    if (listenTimeout) { clearTimeout(listenTimeout); listenTimeout = null; }
+    globalThis.dispatchEvent(new CustomEvent("voice-transcript", { detail: "" }));
+  }
+
   function startListening() {
     if (listening) return;
     recognition.start();
     listening = true;
     micBtn.style.background = "#e11d48";
-    statusEl.textContent = "Listening...";
+    micBtn.innerHTML = `🔴 <span style="font-size:13px;font-weight:600;">Listening...</span>`;
+    statusEl.textContent = "🎙 Say a command...";
     statusEl.style.display = "block";
+    globalThis.dispatchEvent(new Event("voice-listening"));
+    // Auto-reset after 7s in case recognition never fires onend (e.g. in WebXR)
+    listenTimeout = setTimeout(() => resetUI(), 7000);
   }
 
   function stopListening() {
     if (!listening) return;
     recognition.stop();
-    listening = false;
-    micBtn.style.background = "#7b2ff2";
+    resetUI();
   }
+
+  // Listen for voice toggle from panel button in VR
+  globalThis.addEventListener("voice-toggle", () => {
+    if (listening) stopListening();
+    else startListening();
+  });
 
   recognition.onresult = (event: any) => {
     const transcript: string = event.results[0][0].transcript.toLowerCase();
     console.log("[voiceCommand] Heard:", transcript);
-    statusEl.textContent = `"${transcript}"`;
+    statusEl.innerHTML = `🗣 <i>"${transcript}"</i>`;
+    globalThis.dispatchEvent(new CustomEvent("voice-transcript", { detail: `"${transcript}"` }));
     statusEl.style.display = "block";
 
     const now = Date.now();
@@ -186,8 +206,8 @@ export function createVoiceCommandUI(
   };
 
   recognition.onend = () => {
-    listening = false;
-    micBtn.style.background = "#7b2ff2";
+    resetUI();
+    setTimeout(() => { statusEl.style.display = "none"; }, 3000);
   };
 
   // --- Flat mode: click mic button ---
@@ -226,14 +246,19 @@ export function createVoiceCommandUI(
     }
   }
 
-  // Poll XR buttons every frame via requestAnimationFrame
-  const pollLoop = () => {
-    requestAnimationFrame(pollLoop);
-    if (world.renderer.xr.isPresenting) {
+  // Poll XR buttons every frame via onBeforeRender (works in WebXR)
+  const pollMesh = new THREE.Mesh(
+    new THREE.BufferGeometry(),
+    new THREE.MeshBasicMaterial(),
+  );
+  pollMesh.visible = false;
+  pollMesh.frustumCulled = false;
+  pollMesh.onBeforeRender = () => {
+    if ((world.renderer as any).xr?.isPresenting) {
       pollXRButtons();
     }
   };
-  pollLoop();
+  world.scene.add(pollMesh);
 
   console.log("[voiceCommand] Initialized — mic button (flat) / X button (VR)");
 }
