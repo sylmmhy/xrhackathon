@@ -95,9 +95,9 @@ export default defineConfig({
   },
   esbuild: { target: "esnext" },
   optimizeDeps: {
-    exclude: ["@babylonjs/havok"],
+    exclude: ["@babylonjs/havok", "@iwsdk/core"],
     esbuildOptions: { target: "esnext" },
   },
   publicDir: "public",
-  base: "./",
+  base: process.env.NODE_ENV === "production" ? "./" : "/",
 });

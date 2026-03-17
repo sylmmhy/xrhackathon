@@ -224,10 +224,10 @@ export class PanelSystem extends createSystem({
       const worldButton = document.getElementById("world-button") as UIKit.Text;
       if (worldButton) {
         const worlds = [
-          { name: "Disney Castle", url: "./splats/disney_castle.spz", autoFit: false, position: [0, 0, 0], walls: false },
-          { name: "Yume World", url: "./splats/world_500k_edit_6_4.splat", autoFit: false, position: [0, 0.4, 0], walls: false },
+          { name: "Disney Castle", url: "./splats/disney_castle.spz", autoFit: false, position: [0, 0.5, 0], walls: false },
+          { name: "Yume World", url: "./splats/world_500k_edit_6_4.splat", autoFit: false, position: [0, 0, 0], walls: false },
         ];
-        let currentWorldIndex = 0;
+        let currentWorldIndex = 1;
         let switching = false;
 
         worldButton.setProperties({ text: `World: ${worlds[0].name}` });
