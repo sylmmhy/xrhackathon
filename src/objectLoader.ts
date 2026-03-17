@@ -14,6 +14,53 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 const gltfLoader = new GLTFLoader();
 const POLL_INTERVAL_MS = 3000;
 
+// Shared blob shadow texture (created once, reused for all objects)
+let blobShadowTexture: THREE.Texture | null = null;
+function getBlobTexture(): THREE.Texture {
+  if (blobShadowTexture) return blobShadowTexture;
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d")!;
+  const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gradient.addColorStop(0, "rgba(0,0,0,1)");
+  gradient.addColorStop(0.3, "rgba(0,0,0,0.7)");
+  gradient.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 128, 128);
+  blobShadowTexture = new THREE.CanvasTexture(canvas);
+  return blobShadowTexture;
+}
+
+function attachBlobShadow(model: THREE.Object3D, scene: THREE.Scene, footprint: number): void {
+  const MAX_HEIGHT = 0.4;
+  const GROUND_Y = 0.06;
+  const shadowMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({
+      map: getBlobTexture(),
+      transparent: true,
+      depthWrite: false,
+      depthTest: false,
+      opacity: 0,
+    }),
+  );
+  shadowMesh.renderOrder = -5;
+  scene.add(shadowMesh);
+
+  const worldPos = new THREE.Vector3();
+
+  const mat = shadowMesh.material as THREE.MeshBasicMaterial;
+  shadowMesh.onBeforeRender = () => {
+    model.getWorldPosition(worldPos);
+    const height = Math.max(0, worldPos.y);
+    const t = Math.min(height / MAX_HEIGHT, 1);
+    mat.opacity = (1 - t) * 0.75;
+    shadowMesh.scale.setScalar(footprint * (0.7 + t * 0.5));
+    shadowMesh.position.set(worldPos.x, GROUND_Y, worldPos.z);
+  };
+}
+
 /**
  * Load a GLB from URL and spawn it as a grabbable entity in the world.
  * Auto-scales to ~0.5m and places at the given position (default: 2m in front of camera).
@@ -47,8 +94,6 @@ export async function spawnGLBFromUrl(
     model.scale.multiplyScalar(scale);
   }
 
-  // Disable frustum culling — prevents the model from disappearing
-  // in one eye during WebXR stereo rendering on devices like Pico.
   model.traverse((child) => {
     child.frustumCulled = false;
   });
@@ -90,6 +135,10 @@ export async function spawnGLBFromUrl(
       friction: 0.5,
       restitution: 0.5,
     });
+
+  // Blob shadow: use XZ footprint of the scaled model
+  const footprint = Math.max(scaledSize.x, scaledSize.z);
+  attachBlobShadow(model, world.scene, footprint);
 
   console.log("[objectLoader] Spawned GLB:", glbUrl);
 }

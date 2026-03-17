@@ -98,15 +98,16 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         } else if (splatEntity.object3D) {
           splatEntity.object3D.position.set(0, 0, 0);
         }
-        await splatSystem.load(splatEntity, { animate: true });
-        // Apply orientation fix for Yume World (needs 180° X flip + scale)
+        // Apply orientation fix on parent BEFORE load so it's correct during animation
         if (splatUrl.includes("world_500k") && splatEntity.object3D) {
-          splatEntity.object3D.children.forEach(child => {
-            child.quaternion.set(1, 0, 0, 0);
-            child.scale.setScalar(1.0);
-            child.position.y = 0.05;
-          });
+          splatEntity.object3D.quaternion.set(1, 0, 0, 0);
+          splatEntity.object3D.scale.setScalar(1.0);
+          splatEntity.object3D.position.y = 0.05;
+        } else if (splatEntity.object3D) {
+          splatEntity.object3D.quaternion.set(0, 0, 0, 1); // identity
+          splatEntity.object3D.scale.setScalar(1.0);
         }
+        await splatSystem.load(splatEntity, { animate: true });
       } catch (err) {
         console.error("[World] Failed to switch world:", err);
       }
@@ -255,16 +256,14 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     if (directSplat) {
       // Direct splat URL: load it immediately, skip create UI
       splatEntity.setValue(GaussianSplatLoader, "splatUrl", directSplat);
+      // Apply orientation fix on parent BEFORE load so it's correct during animation
+      if (splatEntity.object3D) {
+        splatEntity.object3D.quaternion.set(1, 0, 0, 0);
+        splatEntity.object3D.scale.setScalar(1.0);
+        splatEntity.object3D.position.y = 0.05;
+      }
       splatSystem.load(splatEntity, { animate: true })
         .then(async () => {
-          // Fix orientation: 180° X rotation via quaternion (OpenCV → OpenGL coords)
-          if (splatEntity.object3D) {
-            splatEntity.object3D.children.forEach(child => {
-              child.quaternion.set(1, 0, 0, 0);
-              child.scale.setScalar(1.0);
-              child.position.y = 0.05;
-            });
-          }
           // Load GLB models
           const testGlb = params.get("glb") || "./SM_Aligator.glb";
           if (testGlb) {
