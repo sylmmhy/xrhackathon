@@ -17,22 +17,34 @@ export function initPhotoSystem(world: World): void {
 
     const renderer = world.renderer as THREE.WebGLRenderer;
 
-    // Hide UI, controllers, and ray lines so they don't appear in the photo
+    // Hide UI, controllers, ray beam, and cursor so they don't appear in the photo.
+    // We use Three.js layers instead of visible=false — this survives IWSDK's own
+    // update loop that may re-enable visibility during renderer.render().
+    // Camera default layers.mask = 1 (layer 0 only) → objects on layer 31 are skipped.
     globalThis.dispatchEvent(new Event("pre-capture"));
 
     const xr = renderer.xr;
-    const hiddenCtrls = [
+    const ctrlGroups = [
       xr.getController(0), xr.getController(1),
       xr.getControllerGrip(0), xr.getControllerGrip(1),
     ];
-    hiddenCtrls.forEach((c) => { if (c) c.visible = false; });
 
-    // Also hide any Line objects (IWSDK laser pointer rays)
-    const hiddenLines: THREE.Object3D[] = [];
+    const objsOnLayer31: THREE.Object3D[] = [];
+    const moveToLayer31 = (obj: THREE.Object3D) => {
+      obj.layers.set(31);
+      objsOnLayer31.push(obj);
+    };
+
+    // Controller groups + all descendants (ray beam CylinderMesh is a child)
+    ctrlGroups.forEach((c) => { if (c) c.traverse(moveToLayer31); });
+
+    // IWSDK cursor dot (CircleGeometry) is added to xrOrigin (not the controller)
+    // and tagged with userData.attached = true. Also catch any stray Lines.
     world.scene.traverse((obj) => {
-      if ((obj instanceof THREE.Line || obj instanceof THREE.LineSegments) && obj.visible) {
-        obj.visible = false;
-        hiddenLines.push(obj);
+      if (obj.userData.attached ||
+          obj instanceof THREE.Line ||
+          obj instanceof THREE.LineSegments) {
+        moveToLayer31(obj);
       }
     });
 
@@ -53,9 +65,8 @@ export function initPhotoSystem(world: World): void {
 
     renderer.outputColorSpace = prevOutputCS;
 
-    // Restore controllers, ray lines, and UI
-    hiddenCtrls.forEach((c) => { if (c) c.visible = true; });
-    hiddenLines.forEach((obj) => { obj.visible = true; });
+    // Restore all objects back to layer 0 so XR rendering resumes normally
+    objsOnLayer31.forEach((obj) => { obj.layers.set(0); });
     globalThis.dispatchEvent(new Event("post-capture"));
 
     // Read pixels (WebGL is bottom-to-top, flip Y, convert linear→sRGB)
