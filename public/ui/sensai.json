@@ -70,12 +70,23 @@
         "sourceTag": "button",
         "type": "custom",
         "children": [
+          "📷 Photo 0/6"
+        ],
+        "properties": {
+          "id": "photo-button"
+        },
+        "dataUid": "uid-8"
+      },
+      {
+        "sourceTag": "button",
+        "type": "custom",
+        "children": [
           "Switch World"
         ],
         "properties": {
           "id": "world-button"
         },
-        "dataUid": "uid-8"
+        "dataUid": "uid-9"
       }
     ],
     "properties": {
@@ -153,6 +164,22 @@
         "color": "#fbbf24",
         "borderRadius": 1.5,
         "borderWidth": "0",
+        "fontSize": "2.5",
+        "fontWeight": "bold",
+        "textAlign": "center",
+        "cursor": "pointer"
+      }
+    },
+    "__id__photo-button": {
+      "content": {
+        "width": "100%",
+        "padding": "1.5",
+        "marginTop": "1",
+        "backgroundColor": "#1a1a3e",
+        "color": "#c4b5fd",
+        "borderColor": "#7b2ff2",
+        "borderWidth": "0.15",
+        "borderRadius": 1.5,
         "fontSize": "2.5",
         "fontWeight": "bold",
         "textAlign": "center",
@@ -247,7 +274,7 @@
         "column": 14
       }
     },
-    "__id__world-button": {
+    "__id__photo-button": {
       "start": {
         "line": 69,
         "column": 2
@@ -257,83 +284,103 @@
         "column": 15
       }
     },
-    "uid-1": {
+    "__id__world-button": {
       "start": {
         "line": 84,
+        "column": 2
+      },
+      "end": {
+        "line": 84,
+        "column": 15
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 100,
         "column": 0
       },
       "end": {
-        "line": 92,
+        "line": 109,
         "column": 6
       }
     },
     "uid-2": {
       "start": {
-        "line": 85,
+        "line": 101,
         "column": 2
       },
       "end": {
-        "line": 85,
+        "line": 101,
         "column": 58
       }
     },
     "uid-3": {
       "start": {
-        "line": 86,
+        "line": 102,
         "column": 2
       },
       "end": {
-        "line": 86,
+        "line": 102,
         "column": 59
       }
     },
     "uid-4": {
       "start": {
-        "line": 87,
+        "line": 103,
         "column": 2
       },
       "end": {
-        "line": 87,
+        "line": 103,
         "column": 29
       }
     },
     "uid-5": {
       "start": {
-        "line": 88,
+        "line": 104,
         "column": 2
       },
       "end": {
-        "line": 88,
+        "line": 104,
         "column": 48
       }
     },
     "uid-6": {
       "start": {
-        "line": 89,
+        "line": 105,
         "column": 2
       },
       "end": {
-        "line": 89,
+        "line": 105,
         "column": 42
       }
     },
     "uid-7": {
       "start": {
-        "line": 90,
+        "line": 106,
         "column": 2
       },
       "end": {
-        "line": 90,
+        "line": 106,
         "column": 45
       }
     },
     "uid-8": {
       "start": {
-        "line": 91,
+        "line": 107,
         "column": 2
       },
       "end": {
-        "line": 91,
+        "line": 107,
+        "column": 49
+      }
+    },
+    "uid-9": {
+      "start": {
+        "line": 108,
+        "column": 2
+      },
+      "end": {
+        "line": 108,
         "column": 49
       }
     }

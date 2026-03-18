@@ -220,6 +220,20 @@ export class PanelSystem extends createSystem({
         });
       }
 
+      // Photo button
+      const photoButton = document.getElementById("photo-button") as UIKit.Text;
+      if (photoButton) {
+        let photoCount = 0;
+        photoButton.addEventListener("click", () => {
+          if (photoCount >= 6) return;
+          globalThis.dispatchEvent(new Event("take-photo"));
+        });
+        globalThis.addEventListener("photo-count", (e) => {
+          photoCount = (e as CustomEvent).detail;
+          photoButton.setProperties({ text: photoCount >= 6 ? "📷 Done!" : `📷 Photo ${photoCount}/6` });
+        });
+      }
+
       // World switch button
       const worldButton = document.getElementById("world-button") as UIKit.Text;
       if (worldButton) {

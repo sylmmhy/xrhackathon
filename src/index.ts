@@ -30,6 +30,7 @@ import { createTouchLocomotion } from "./touchLocomotion.js";
 import { GrabPhysicsSystem } from "./grabPhysicsSystem.js";
 import { PlayerPushSystem } from "./playerPushSystem.js";
 import { createVoiceCommandUI } from "./voiceCommand.js";
+import { initPhotoSystem } from "./photoSystem.js";
 // rainToys is now triggered from the panel UI button
 
 
@@ -55,6 +56,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 })
   .then(async (world) => {
     world.camera.position.set(0, 1.5, 0);
+    initPhotoSystem(world);
     world.scene.background = new THREE.Color(0x000000);
     world.scene.add(new THREE.AmbientLight(0xffffff, 1.0));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -221,6 +223,117 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       });
     panelEntity.object3D!.position.set(0, 1.29, -1.9);
 
+    // ------------------------------------------------------------
+    // Photo thumbnail strip — follows camera independently in XR
+    // ------------------------------------------------------------
+    const THUMB_W = 0.46, THUMB_H = 0.34;
+    const THUMB_GAP = 0.03;
+    const THUMBS_PER_ROW = 3;
+    const MAX_THUMBS = 6;
+    const totalStripW = THUMBS_PER_ROW * THUMB_W + (THUMBS_PER_ROW - 1) * THUMB_GAP;
+
+    const photoStrip = new THREE.Group();
+    photoStrip.visible = false;
+    world.scene.add(photoStrip); // independent from panel — no ScreenSpace conflicts
+
+    let thumbIndex = 0;
+
+    const matProps = {
+      transparent: true,
+      depthTest: true,
+      depthWrite: false,
+      depthFunc: THREE.AlwaysDepth,
+    };
+
+    function addPhotoThumb(dataURL: string) {
+      const idx = thumbIndex++;
+      const col = idx % THUMBS_PER_ROW;
+      const row = Math.floor(idx / THUMBS_PER_ROW);
+
+      const x = -totalStripW / 2 + col * (THUMB_W + THUMB_GAP) + THUMB_W / 2;
+      // Row 0 = top, row 1 = bottom
+      const y = row === 0 ? (THUMB_H + THUMB_GAP) / 2 : -((THUMB_H + THUMB_GAP) / 2);
+
+      const group = new THREE.Group();
+      group.position.set(x, y, 0);
+
+      // White polaroid frame (slightly larger, sits behind)
+      const frame = new THREE.Mesh(
+        new THREE.PlaneGeometry(THUMB_W + 0.02, THUMB_H + 0.05),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, ...matProps }),
+      );
+      frame.renderOrder = 10001;
+      group.add(frame);
+
+      // Photo — TextureLoader handles async natively, no black-frame race condition
+      const texture = new THREE.TextureLoader().load(dataURL);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const photo = new THREE.Mesh(
+        new THREE.PlaneGeometry(THUMB_W, THUMB_H * 0.82), // photo sits in upper part of polaroid
+        new THREE.MeshBasicMaterial({ map: texture, ...matProps }),
+      );
+      photo.position.set(0, 0.016, 0.001); // shift up slightly, in front of frame
+      photo.renderOrder = 10002;
+      group.add(photo);
+
+      photoStrip.add(group);
+    }
+
+    globalThis.addEventListener("photo-taken", (e) => {
+      addPhotoThumb((e as CustomEvent).detail as string);
+    });
+
+    // Hide UI during capture so it doesn't appear in the photo
+    globalThis.addEventListener("pre-capture", () => {
+      if (panelEntity.object3D) panelEntity.object3D.visible = false;
+      photoStrip.visible = false;
+    });
+    globalThis.addEventListener("post-capture", () => {
+      if (panelEntity.object3D) panelEntity.object3D.visible = true;
+      photoStrip.visible = thumbIndex > 0;
+    });
+
+    // In XR: panel + photo strip both follow the player's head each frame
+    const _panelFwd  = new THREE.Vector3();
+    const _camWorldPos  = new THREE.Vector3();
+    const _camWorldQuat = new THREE.Quaternion();
+    const _panelPollMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.001, 0.001),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false }),
+    );
+    _panelPollMesh.frustumCulled = false;
+    world.scene.add(_panelPollMesh);
+    _panelPollMesh.onBeforeRender = () => {
+      const isXR = (world.renderer as THREE.WebGLRenderer).xr.isPresenting;
+      if (!isXR || !panelEntity.object3D) {
+        photoStrip.visible = false;
+        return;
+      }
+
+      // Use world-space position/quaternion so scene-level objects are placed correctly
+      const cam = world.camera;
+      cam.getWorldPosition(_camWorldPos);
+      cam.getWorldQuaternion(_camWorldQuat);
+      _panelFwd.set(0, 0, -1).applyQuaternion(_camWorldQuat);
+
+      // Panel: 1.5 m ahead, slightly below eye level
+      panelEntity.object3D.position
+        .copy(_camWorldPos)
+        .addScaledVector(_panelFwd, 1.5)
+        .setY(_camWorldPos.y - 0.1);
+      panelEntity.object3D.quaternion.copy(_camWorldQuat);
+
+      // Photo strip: sit directly below the panel using its computed world position
+      photoStrip.visible = thumbIndex > 0;
+      if (thumbIndex > 0) {
+        panelEntity.object3D.updateWorldMatrix(true, false);
+        const panelWorldY = panelEntity.object3D.getWorldPosition(_camWorldPos.clone()).y;
+        photoStrip.position
+          .copy(panelEntity.object3D.getWorldPosition(new THREE.Vector3()))
+          .setY(panelWorldY - 0.90); // below panel bottom edge (2-row strip)
+        photoStrip.quaternion.copy(_camWorldQuat);
+      }
+    };
 
     // ------------------------------------------------------------
     // World loading / creation flow

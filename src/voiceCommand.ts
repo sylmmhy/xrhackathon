@@ -71,50 +71,18 @@ export function createVoiceCommandUI(
   let listening = false;
   let listenTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // --- Voice UI panel ---
-  const panel = document.createElement("div");
-  panel.style.cssText = `
-    position:fixed; bottom:24px; left:24px; z-index:10000;
-    font-family:-apple-system,sans-serif;
-    display:flex; flex-direction:column; gap:8px; align-items:flex-start;
-  `;
-  document.body.appendChild(panel);
-
-  // Mic button
-  const micBtn = document.createElement("button");
-  micBtn.id = "voice-btn";
-  micBtn.innerHTML = `🎤 <span style="font-size:13px;font-weight:600;">Voice</span>`;
-  micBtn.style.cssText = `
-    display:flex; align-items:center; gap:6px;
-    padding:10px 18px; border-radius:24px; border:none;
-    background:#7b2ff2; color:#fbbf24; font-size:20px;
-    cursor:pointer; box-shadow:0 4px 12px rgba(123,47,242,0.4);
-    transition:background 0.15s;
-  `;
-  panel.appendChild(micBtn);
-
-  // Hints panel (shown always)
-  const hintsEl = document.createElement("div");
-  hintsEl.style.cssText = `
-    background:rgba(13,2,33,0.85); color:#fff;
-    border-radius:10px; padding:10px 14px;
-    font-size:12px; line-height:1.7;
-    border:1px solid rgba(251,191,36,0.2);
-  `;
-  hintsEl.innerHTML = `
-    <div style="color:#fbbf24;font-weight:700;margin-bottom:4px;">🎙 Voice Commands</div>
-    <div>🌧 <b>"rain"</b> / "fall" / "drop"</div>
-  `;
-  panel.appendChild(hintsEl);
-
-  // Transcript display (shown when listening or after result)
+  // Transcript display (hidden, only shown when listening)
   const statusEl = document.createElement("div");
   statusEl.style.cssText = `
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
     background:rgba(13,2,33,0.95); color:#fbbf24;
     border-radius:10px; padding:10px 14px; font-size:13px;
-    border:1px solid #7b2ff2; display:none; min-width:180px;
+    border:1px solid #7b2ff2; display:none; z-index:10001;
   `;
-  panel.appendChild(statusEl);
+  document.body.appendChild(statusEl);
+
+  // Dummy micBtn reference (no DOM button, but keep logic intact)
+  const micBtn = { style: { background: "" }, innerHTML: "" } as any;
 
   // --- Voice actions ---
   const actions: VoiceAction[] = [
@@ -210,11 +178,6 @@ export function createVoiceCommandUI(
     setTimeout(() => { statusEl.style.display = "none"; }, 3000);
   };
 
-  // --- Flat mode: click mic button ---
-  micBtn.addEventListener("click", () => {
-    if (listening) stopListening();
-    else startListening();
-  });
 
   // --- VR mode: left controller X button (index 4) or A button (index 4) ---
   // Poll gamepad buttons each frame while in XR
