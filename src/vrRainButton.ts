@@ -2,28 +2,25 @@ import * as THREE from "three";
 import { World } from "@iwsdk/core";
 import { spawnGLBFromUrl } from "./objectLoader.js";
 
-const DEFAULT_GLB = "./SM_Aligator.glb";
+const TOY_MODELS = ["./SM_Aligator.glb", "./CuteFox.glb", "./GothicFox.glb"];
 
 /**
- * Spawn `count` toys raining from the sky above the player.
+ * Spawn 2–10 random alligator/fox toys raining from the sky above the player.
  */
-export async function rainToys(
-  world: World,
-  count: number,
-  glbUrl: string = DEFAULT_GLB,
-) {
+export async function rainToys(world: World) {
+  const count = 2 + Math.floor(Math.random() * 9); // 2–10
+
   const cam = world.camera;
+  // Use actual look direction (including Y) so toys rain through the camera's field of view
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-  forward.y = 0;
-  forward.normalize();
-  const center = cam.position.clone().addScaledVector(forward, 3);
+  const center = cam.position.clone().addScaledVector(forward, 1);
 
   for (let i = 0; i < count; i++) {
-    // Small random spread so they stack like a tower
+    const glbUrl = TOY_MODELS[Math.floor(Math.random() * TOY_MODELS.length)];
     const pos = new THREE.Vector3(
-      center.x + (Math.random() - 0.5) * 0.5,
-      4 + i * 1.2,
-      center.z + (Math.random() - 0.5) * 0.5,
+      center.x + (Math.random() - 0.5) * 2,
+      center.y + 2 + Math.random() * 2,
+      center.z + (Math.random() - 0.5) * 2,
     );
     spawnGLBFromUrl(world, glbUrl, pos).catch((err) =>
       console.warn("[rainToys] spawn failed:", err),

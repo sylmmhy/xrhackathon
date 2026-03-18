@@ -32,6 +32,23 @@ function getBlobTexture(): THREE.Texture {
   return blobShadowTexture;
 }
 
+// Track all spawned entities + shadows for world-switch cleanup
+const spawnedEntities: { destroy(): void }[] = [];
+const spawnedShadows: THREE.Mesh[] = [];
+
+export function clearSpawnedObjects(scene: THREE.Scene): void {
+  for (const entity of spawnedEntities) {
+    try { entity.destroy(); } catch {}
+  }
+  for (const shadow of spawnedShadows) {
+    if (shadow.parent) shadow.parent.remove(shadow);
+    shadow.geometry.dispose();
+    (shadow.material as THREE.Material).dispose();
+  }
+  spawnedEntities.length = 0;
+  spawnedShadows.length = 0;
+}
+
 function attachBlobShadow(model: THREE.Object3D, scene: THREE.Scene, footprint: number): void {
   const MAX_HEIGHT = 0.4;
   const GROUND_Y = 0.06;
@@ -47,6 +64,7 @@ function attachBlobShadow(model: THREE.Object3D, scene: THREE.Scene, footprint: 
   );
   shadowMesh.renderOrder = 2; // render after splat (default 0) so it's visible
   scene.add(shadowMesh);
+  spawnedShadows.push(shadowMesh);
 
   const worldPos = new THREE.Vector3();
 
@@ -113,7 +131,7 @@ export async function spawnGLBFromUrl(
   const scaledBox = new THREE.Box3().setFromObject(model);
   const scaledSize = scaledBox.getSize(new THREE.Vector3());
 
-  world
+  const entity = world
     .createTransformEntity(model)
     .addComponent(Interactable)
     .addComponent(DistanceGrabbable, {
@@ -135,6 +153,8 @@ export async function spawnGLBFromUrl(
       friction: 0.5,
       restitution: 0.5,
     });
+
+  spawnedEntities.push(entity);
 
   // Blob shadow: use XZ footprint of the scaled model
   const footprint = Math.max(scaledSize.x, scaledSize.z);

@@ -123,7 +123,8 @@ export class PanelSystem extends createSystem({
           if (now - lastRain < 8000) return;
           lastRain = now;
           rainButton.setProperties({ text: "Raining!" });
-          rainToys(this.world, 15);
+          globalThis.dispatchEvent(new Event("hide-ui")); // hide UI while raining
+          rainToys(this.world);
           setTimeout(() => rainButton.setProperties({ text: "Rain Toys" }), 3000);
         });
       }

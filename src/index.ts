@@ -21,7 +21,7 @@ import {
 import { PanelSystem } from "./uiPanel.js";
 import { GaussianSplatLoader, GaussianSplatLoaderSystem,} from "./gaussianSplatLoader.js";
 import { createUploadUI } from "./uploadUI.js";
-import { loadExistingObjects, spawnGLBFromUrl } from "./objectLoader.js";
+import { loadExistingObjects, spawnGLBFromUrl, clearSpawnedObjects } from "./objectLoader.js";
 import { showCreateWorldUI } from "./createWorldUI.js";
 import { fetchWorldAssets, type WorldAssets } from "./worldGenerator.js";
 import { DeviceOrientationCamera } from "./deviceOrientationCamera.js";
@@ -89,6 +89,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
     // Listen for world switch from panel UI
     globalThis.addEventListener("switch-world", async (e) => {
+      clearSpawnedObjects(world.scene);
       const { splatUrl, autoFit, position } = (e as CustomEvent).detail;
       try {
         await splatSystem.unload(splatEntity, { animate: true });
@@ -362,6 +363,12 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       fMesh.visible = true;
     });
 
+    globalThis.addEventListener("hide-ui", () => {
+      if (panelEntity.object3D) panelEntity.object3D.visible = false;
+      photoStrip.visible = false;
+      countdownActive = true;
+    });
+
     // Hide UI during capture so it doesn't appear in the photo
     globalThis.addEventListener("pre-capture", () => {
       if (panelEntity.object3D) panelEntity.object3D.visible = false;
@@ -390,6 +397,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
     const togglePanel = () => {
       panelVisible = !panelVisible;
+      countdownActive = false; // clear any hide-ui / countdown state
       if (panelEntity.object3D) panelEntity.object3D.visible = panelVisible;
       photoStrip.visible = panelVisible && thumbIndex > 0;
     };
