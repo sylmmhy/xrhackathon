@@ -290,7 +290,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       photoStrip.visible = false;
     });
     globalThis.addEventListener("post-capture", () => {
-      if (panelEntity.object3D) panelEntity.object3D.visible = true;
+      if (panelEntity.object3D) panelEntity.object3D.visible = panelVisible;
       photoStrip.visible = thumbIndex > 0;
     });
 
@@ -304,11 +304,37 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     );
     _panelPollMesh.frustumCulled = false;
     world.scene.add(_panelPollMesh);
+    // Toggle panel visibility with left controller Y button (XR) or H key (browser)
+    let menuBtnWasPressed = false;
+    let panelVisible = true;
+
+    const togglePanel = () => {
+      panelVisible = !panelVisible;
+      if (panelEntity.object3D) panelEntity.object3D.visible = panelVisible;
+      photoStrip.visible = panelVisible && thumbIndex > 0;
+    };
+
+    globalThis.addEventListener("keydown", (e) => {
+      if ((e as KeyboardEvent).key === "h" || (e as KeyboardEvent).key === "H") togglePanel();
+    });
+
     _panelPollMesh.onBeforeRender = () => {
       const isXR = (world.renderer as THREE.WebGLRenderer).xr.isPresenting;
       if (!isXR || !panelEntity.object3D) {
         photoStrip.visible = false;
         return;
+      }
+
+      // Poll left controller menu button to toggle panel
+      const session = (world.renderer as THREE.WebGLRenderer).xr.getSession();
+      if (session) {
+        for (const source of session.inputSources) {
+          if (source.handedness === "left" && source.gamepad) {
+            const btn = source.gamepad.buttons[5]; // Y button on Meta Quest left controller
+            if (btn?.pressed && !menuBtnWasPressed) togglePanel();
+            menuBtnWasPressed = btn?.pressed ?? false;
+          }
+        }
       }
 
       // Use world-space position/quaternion so scene-level objects are placed correctly
@@ -325,8 +351,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       panelEntity.object3D.quaternion.copy(_camWorldQuat);
 
       // Photo strip: sit directly below the panel using its computed world position
-      photoStrip.visible = thumbIndex > 0;
-      if (thumbIndex > 0) {
+      photoStrip.visible = panelVisible && thumbIndex > 0;
+      panelEntity.object3D.visible = panelVisible;
+      if (panelVisible && thumbIndex > 0) {
         panelEntity.object3D.updateWorldMatrix(true, false);
         const panelWorldY = panelEntity.object3D.getWorldPosition(_camWorldPos.clone()).y;
         photoStrip.position
