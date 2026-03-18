@@ -123,37 +123,50 @@ function showFlash(): void {
 function showPolaroidStrip(photos: string[]): void {
   const overlay = document.createElement("div");
   overlay.style.cssText = `
-    position:fixed; inset:0; background:rgba(0,0,0,0.88);
+    position:fixed; inset:0;
+    background:linear-gradient(135deg, rgba(255,248,240,0.96), rgba(240,230,255,0.96));
     z-index:99998; display:flex; flex-direction:column;
     align-items:center; justify-content:center; gap:28px;
-    font-family:-apple-system,sans-serif;
+    font-family:Nunito,sans-serif;
   `;
 
-  const title = document.createElement("div");
-  title.textContent = "Your Dream Moments ✨";
-  title.style.cssText = `color:#fbbf24; font-size:22px; font-weight:700;`;
-  overlay.appendChild(title);
+  // Use YUME logo as header
+  const logo = document.createElement("img");
+  logo.src = "/Yume.png";
+  logo.style.cssText = `height:60px; object-fit:contain;`;
+  overlay.appendChild(logo);
+
+  const subtitle = document.createElement("div");
+  subtitle.textContent = "Your Dream Moments";
+  subtitle.style.cssText = `
+    font-size:20px; font-weight:700; letter-spacing:1px;
+    background:linear-gradient(90deg, #3aaa35, #5ba3d9, #e53935, #7b2ff2);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    background-clip:text;
+  `;
+  overlay.appendChild(subtitle);
 
   const strip = document.createElement("div");
-  strip.style.cssText = `display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; justify-content:center; max-width:95vw;`;
+  strip.style.cssText = `display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; justify-content:center; max-width:95vw;`;
 
   const rotations = [-3, 2, -1.5, 3, -2, 1];
+  const shadowColors = ["rgba(58,170,53,0.3)", "rgba(91,163,217,0.3)", "rgba(229,57,53,0.3)", "rgba(123,47,242,0.3)", "rgba(58,170,53,0.3)", "rgba(229,57,53,0.3)"];
   photos.forEach((dataURL, i) => {
     const polaroid = document.createElement("div");
     polaroid.style.cssText = `
       background:#fff; padding:8px 8px 28px;
-      box-shadow:0 6px 20px rgba(0,0,0,0.6);
+      box-shadow:0 6px 24px ${shadowColors[i] ?? "rgba(0,0,0,0.2)"};
       transform:rotate(${rotations[i] ?? 0}deg);
-      flex-shrink:0;
+      flex-shrink:0; border-radius:4px;
     `;
     const img = document.createElement("img");
     img.src = dataURL;
-    img.style.cssText = `width:150px; height:110px; object-fit:cover; display:block;`;
+    img.style.cssText = `width:150px; height:110px; object-fit:cover; display:block; border-radius:2px;`;
     polaroid.appendChild(img);
 
     const label = document.createElement("div");
     label.textContent = `#${i + 1}`;
-    label.style.cssText = `text-align:center; color:#999; font-size:11px; margin-top:6px;`;
+    label.style.cssText = `text-align:center; color:#7b2ff2; font-size:12px; font-weight:600; margin-top:8px;`;
     polaroid.appendChild(label);
 
     strip.appendChild(polaroid);
@@ -162,21 +175,25 @@ function showPolaroidStrip(photos: string[]): void {
   overlay.appendChild(strip);
 
   const btnRow = document.createElement("div");
-  btnRow.style.cssText = `display:flex; gap:12px;`;
+  btnRow.style.cssText = `display:flex; gap:14px; margin-top:8px;`;
 
   const downloadBtn = document.createElement("button");
-  downloadBtn.textContent = "⬇ Download";
+  downloadBtn.textContent = "Download";
   downloadBtn.style.cssText = `
-    padding:12px 28px; border:none; border-radius:10px;
-    background:#fbbf24; color:#0d0221; font-size:16px; font-weight:700; cursor:pointer;
+    padding:12px 32px; border:none; border-radius:12px;
+    background:linear-gradient(135deg, #3aaa35, #5ba3d9);
+    color:#fff; font-size:16px; font-weight:700; cursor:pointer;
+    font-family:Nunito,sans-serif; box-shadow:0 3px 12px rgba(58,170,53,0.3);
   `;
   downloadBtn.addEventListener("click", () => downloadStrip(photos));
 
   const closeBtn = document.createElement("button");
-  closeBtn.textContent = "✕ Close";
+  closeBtn.textContent = "Close";
   closeBtn.style.cssText = `
-    padding:12px 28px; border:none; border-radius:10px;
-    background:#7b2ff2; color:#fbbf24; font-size:16px; font-weight:700; cursor:pointer;
+    padding:12px 32px; border:none; border-radius:12px;
+    background:linear-gradient(135deg, #e53935, #7b2ff2);
+    color:#fff; font-size:16px; font-weight:700; cursor:pointer;
+    font-family:Nunito,sans-serif; box-shadow:0 3px 12px rgba(123,47,242,0.3);
   `;
   closeBtn.addEventListener("click", () => overlay.remove());
 
@@ -198,7 +215,11 @@ function downloadStrip(photos: string[]): void {
   canvas.height = PH + PAD * 2;
   const ctx = canvas.getContext("2d")!;
 
-  ctx.fillStyle = "#0d0221";
+  // Soft cream background matching YUME theme
+  const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  grad.addColorStop(0, "#fff8f0");
+  grad.addColorStop(1, "#f0e6ff");
+  ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   let loaded = 0;
@@ -216,8 +237,8 @@ function downloadStrip(photos: string[]): void {
 
       ctx.drawImage(img, x + (PW - PHOTO_W) / 2, y + 8, PHOTO_W, PHOTO_H);
 
-      ctx.fillStyle = "#999";
-      ctx.font = "12px -apple-system, sans-serif";
+      ctx.fillStyle = "#7b2ff2";
+      ctx.font = "12px Nunito, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(`#${i + 1}`, x + PW / 2, y + PH - 8);
 

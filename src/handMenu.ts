@@ -44,13 +44,13 @@ function makeButtonTexture(emoji: string, label: string, highlight = false): THR
   roundRect(ctx, 8, 8, W - 16, H - 16, 40);
   ctx.stroke();
 
-  ctx.font = `${H * 0.52}px serif`;
+  ctx.font = `${H * 0.52}px Nunito, sans-serif`;
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#000";
   ctx.fillText(emoji, H * 0.15, H * 0.52);
 
   ctx.fillStyle = "#3a1c00";
-  ctx.font = `bold ${H * 0.35}px Georgia, serif`;
+  ctx.font = `bold ${H * 0.35}px Nunito, sans-serif`;
   ctx.textBaseline = "middle";
   ctx.fillText(label, H * 0.75, H * 0.52);
 
@@ -179,7 +179,7 @@ export function initHandMenu(world: World): void {
     if (triggerPressed && !triggerWasPressed && hit) {
       triggerWasPressed = true;
       if (hit === rainBtn) {
-        rainToys(world, 10);
+        rainToys(world);
       } else if (hit === photoBtn && photoCount < 6) {
         globalThis.dispatchEvent(new Event("take-photo"));
       }

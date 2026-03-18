@@ -42,7 +42,7 @@ export function createUploadUI(world: World, worldId: string): void {
       flex-direction: column;
       align-items: flex-end;
       gap: 8px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: Nunito, sans-serif;
     }
     #upload-btn {
       width: 56px;

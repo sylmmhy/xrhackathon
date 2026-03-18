@@ -144,7 +144,7 @@ export class PanelSystem extends createSystem({
           let remaining = 3;
           const tick = () => {
             if (remaining > 0) {
-              photoButton.setProperties({ text: `📷  ${remaining}` });
+              photoButton.setProperties({ text: `${remaining}` });
               globalThis.dispatchEvent(new CustomEvent("photo-countdown", { detail: remaining }));
               remaining--;
               setTimeout(tick, 1000);
@@ -158,21 +158,22 @@ export class PanelSystem extends createSystem({
 
         globalThis.addEventListener("photo-count", (e) => {
           photoCount = (e as CustomEvent).detail;
-          photoButton.setProperties({ text: photoCount >= 6 ? "📷 Done!" : `📷 Photo ${photoCount}/6` });
+          photoButton.setProperties({ text: photoCount >= 6 ? "Done!" : `Photo ${photoCount}/6` });
         });
       }
 
-      // World switch button
+      // Next World button — cycles through all worlds in order
       const worldButton = document.getElementById("world-button") as UIKit.Text;
       if (worldButton) {
         const worlds = [
-          { name: "Disney Castle", url: "./splats/disney_castle.spz", autoFit: false, position: [0, 0.5, 0], walls: false },
-          { name: "Yume World", url: "./splats/world_500k_edit_6_4.splat", autoFit: false, position: [0, 0, 0], walls: false },
+          { name: "Yume World", url: "./splats/world_500k_edit_6_4.splat" },
+          { name: "Disney Castle", url: "./splats/disney_castle.spz" },
+          { name: "SensAI", url: "./splats/sensai.spz" },
         ];
-        let currentWorldIndex = 1;
+        let currentWorldIndex = 0; // starts on Yume World (default loaded)
         let switching = false;
 
-        worldButton.setProperties({ text: `World: ${worlds[0].name}` });
+        worldButton.setProperties({ text: "Next World" });
 
         worldButton.addEventListener("click", () => {
           if (switching) return;
@@ -180,15 +181,15 @@ export class PanelSystem extends createSystem({
           currentWorldIndex = (currentWorldIndex + 1) % worlds.length;
           const next = worlds[currentWorldIndex];
           worldButton.setProperties({ text: "Loading..." });
+          globalThis.dispatchEvent(new Event("hide-ui"));
           globalThis.dispatchEvent(
             new CustomEvent("switch-world", {
-              detail: { splatUrl: next.url, autoFit: next.autoFit, position: next.position, walls: next.walls },
+              detail: { splatUrl: next.url, autoFit: false, position: [0, 0, 0], walls: false },
             }),
           );
-          // Listen for completion
           const onDone = () => {
             switching = false;
-            worldButton.setProperties({ text: `World: ${next.name}` });
+            worldButton.setProperties({ text: "Next World" });
             globalThis.removeEventListener("switch-world-done", onDone);
           };
           globalThis.addEventListener("switch-world-done", onDone);

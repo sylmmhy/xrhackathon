@@ -17,34 +17,64 @@
         "sourceTag": "button",
         "type": "custom",
         "children": [
+          {
+            "type": "image",
+            "sourceTag": "img",
+            "properties": {
+              "src": "/icons/rain-white.png",
+              "class": "btn-icon"
+            },
+            "dataUid": "uid-4"
+          },
           "Rain Toys"
         ],
         "properties": {
-          "id": "rain-button"
+          "id": "rain-button",
+          "class": "btn"
+        },
+        "dataUid": "uid-3"
+      },
+      {
+        "sourceTag": "button",
+        "type": "custom",
+        "children": [
+          {
+            "type": "image",
+            "sourceTag": "img",
+            "properties": {
+              "src": "/icons/camera-white.png",
+              "class": "btn-icon"
+            },
+            "dataUid": "uid-6"
+          },
+          "Photo 0/6"
+        ],
+        "properties": {
+          "id": "photo-button",
+          "class": "btn"
+        },
+        "dataUid": "uid-5"
+      },
+      {
+        "sourceTag": "button",
+        "type": "custom",
+        "children": [
+          {
+            "type": "image",
+            "sourceTag": "img",
+            "properties": {
+              "src": "/icons/earth-white.png",
+              "class": "btn-icon"
+            },
+            "dataUid": "uid-8"
+          },
+          "Next World"
+        ],
+        "properties": {
+          "id": "world-button",
+          "class": "btn"
         },
         "dataUid": "uid-7"
-      },
-      {
-        "sourceTag": "button",
-        "type": "custom",
-        "children": [
-          "📷 Photo 0/6"
-        ],
-        "properties": {
-          "id": "photo-button"
-        },
-        "dataUid": "uid-8"
-      },
-      {
-        "sourceTag": "button",
-        "type": "custom",
-        "children": [
-          "Switch World"
-        ],
-        "properties": {
-          "id": "world-button"
-        },
-        "dataUid": "uid-9"
       }
     ],
     "properties": {
@@ -59,8 +89,7 @@
         "padding": "2",
         "width": "50",
         "display": "flex",
-        "flexDirection": "column",
-        "fontFamily": "Patrick Hand"
+        "flexDirection": "column"
       }
     },
     "logo": {
@@ -71,72 +100,201 @@
         "marginBottom": "1"
       }
     },
-    "__id__rain-button": {
+    "btn": {
       "content": {
-        "width": "100%",
-        "padding": "1.5",
+        "width": "66%",
         "marginTop": "1",
-        "backgroundColor": "#6d28d9",
-        "color": "#ffffff",
         "borderRadius": 2,
         "borderWidth": "0",
         "fontSize": "2.5",
         "fontWeight": "bold",
-        "textAlign": "center",
-        "cursor": "pointer"
+        "cursor": "pointer",
+        "display": "flex",
+        "flexDirection": "row",
+        "alignItems": "center",
+        "paddingTop": "1.5",
+        "paddingBottom": "1.5",
+        "paddingLeft": "1.5",
+        "paddingRight": "4"
+      }
+    },
+    "btn-icon": {
+      "content": {
+        "width": "4",
+        "height": "4",
+        "objectFit": "contain",
+        "marginLeft": "2"
+      }
+    },
+    "__id__rain-button": {
+      "content": {
+        "backgroundColor": "#6d28d9",
+        "color": "#ffffff"
       }
     },
     "__id__photo-button": {
       "content": {
-        "width": "100%",
-        "padding": "1.5",
-        "marginTop": "1",
         "backgroundColor": "#0ea5e9",
-        "color": "#ffffff",
-        "borderRadius": 2,
-        "borderWidth": "0",
-        "fontSize": "2.5",
-        "fontWeight": "bold",
-        "textAlign": "center",
-        "cursor": "pointer"
+        "color": "#ffffff"
       }
     },
     "__id__world-button": {
       "content": {
-        "width": "100%",
-        "padding": "1.5",
-        "marginTop": "1",
         "backgroundColor": "#10b981",
-        "color": "#ffffff",
-        "borderRadius": 2,
-        "borderWidth": "0",
-        "fontSize": "2.5",
-        "fontWeight": "bold",
-        "textAlign": "center",
-        "cursor": "pointer"
+        "color": "#ffffff"
       }
     }
   },
   "ranges": {
     "panel-container": {
-      "start": { "line": 1, "column": 2 },
-      "end": { "line": 1, "column": 18 }
+      "start": {
+        "line": 1,
+        "column": 2
+      },
+      "end": {
+        "line": 1,
+        "column": 18
+      }
     },
     "logo": {
-      "start": { "line": 13, "column": 2 },
-      "end": { "line": 13, "column": 7 }
+      "start": {
+        "line": 9,
+        "column": 2
+      },
+      "end": {
+        "line": 9,
+        "column": 7
+      }
+    },
+    "btn": {
+      "start": {
+        "line": 16,
+        "column": 2
+      },
+      "end": {
+        "line": 16,
+        "column": 6
+      }
+    },
+    "btn-icon": {
+      "start": {
+        "line": 33,
+        "column": 2
+      },
+      "end": {
+        "line": 33,
+        "column": 11
+      }
     },
     "__id__rain-button": {
-      "start": { "line": 55, "column": 2 },
-      "end": { "line": 55, "column": 14 }
+      "start": {
+        "line": 40,
+        "column": 2
+      },
+      "end": {
+        "line": 40,
+        "column": 14
+      }
     },
     "__id__photo-button": {
-      "start": { "line": 69, "column": 2 },
-      "end": { "line": 69, "column": 15 }
+      "start": {
+        "line": 45,
+        "column": 2
+      },
+      "end": {
+        "line": 45,
+        "column": 15
+      }
     },
     "__id__world-button": {
-      "start": { "line": 84, "column": 2 },
-      "end": { "line": 84, "column": 15 }
+      "start": {
+        "line": 50,
+        "column": 2
+      },
+      "end": {
+        "line": 50,
+        "column": 15
+      }
+    },
+    "uid-1": {
+      "start": {
+        "line": 56,
+        "column": 0
+      },
+      "end": {
+        "line": 70,
+        "column": 6
+      }
+    },
+    "uid-2": {
+      "start": {
+        "line": 57,
+        "column": 2
+      },
+      "end": {
+        "line": 57,
+        "column": 49
+      }
+    },
+    "uid-3": {
+      "start": {
+        "line": 58,
+        "column": 2
+      },
+      "end": {
+        "line": 61,
+        "column": 11
+      }
+    },
+    "uid-4": {
+      "start": {
+        "line": 59,
+        "column": 4
+      },
+      "end": {
+        "line": 59,
+        "column": 56
+      }
+    },
+    "uid-5": {
+      "start": {
+        "line": 62,
+        "column": 2
+      },
+      "end": {
+        "line": 65,
+        "column": 11
+      }
+    },
+    "uid-6": {
+      "start": {
+        "line": 63,
+        "column": 4
+      },
+      "end": {
+        "line": 63,
+        "column": 58
+      }
+    },
+    "uid-7": {
+      "start": {
+        "line": 66,
+        "column": 2
+      },
+      "end": {
+        "line": 69,
+        "column": 11
+      }
+    },
+    "uid-8": {
+      "start": {
+        "line": 67,
+        "column": 4
+      },
+      "end": {
+        "line": 67,
+        "column": 57
+      }
     }
   }
 }

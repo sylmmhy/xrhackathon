@@ -170,7 +170,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         position:fixed; top:16px; left:50%; transform:translateX(-50%);
         z-index:10001; padding:12px 24px; border:none; border-radius:10px;
         background:#7b2ff2; color:#fbbf24; font-size:16px; font-weight:600;
-        cursor:pointer; font-family:-apple-system,sans-serif;
+        cursor:pointer; font-family:Nunito,sans-serif;
       `;
       document.body.appendChild(enableBtn);
 
@@ -310,7 +310,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       ctx.fill();
       // Number
       ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 150px -apple-system, sans-serif";
+      ctx.font = "bold 150px Nunito, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(String(count), 128, 136);

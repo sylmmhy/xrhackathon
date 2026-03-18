@@ -1,110 +1,71 @@
 <style>
   .panel-container {
     align-items: center;
-    padding: 3;
+    padding: 2;
     width: 50;
     display: flex;
     flex-direction: column;
-    background-color: #0d0221;
-    border-color: #7b2ff2;
-    border-width: 0.2;
-    border-radius: 2;
   }
 
   .logo {
-    width: 45;
-    height: 12;
+    width: 48;
+    height: 18;
     object-fit: contain;
+    margin-bottom: 1;
   }
 
-  .sub-heading {
-    font-size: 1.8;
-    color: #c4b5fd;
-    text-align: center;
-    margin-top: 0.5;
-  }
-
-  .divider {
-    width: 80%;
-    height: 0.1;
-    margin-top: 1.5;
-    margin-bottom: 1.5;
-    background-color: #7b2ff2;
-  }
-
-  .event-line {
-    font-size: 1.6;
-    color: #fbbf24;
-    text-align: center;
-    font-weight: medium;
-  }
-
-  #xr-button {
-    width: 100%;
-    padding: 1.5;
-    margin-top: 2;
-    background-color: #fbbf24;
-    color: #0d0221;
-    border-radius: 1.5;
+  .btn {
+    width: 66%;
+    margin-top: 1;
+    border-radius: 2;
     border-width: 0;
     font-size: 2.5;
     font-weight: bold;
-    text-align: center;
     cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding-top: 1.5;
+    padding-bottom: 1.5;
+    padding-left: 1.5;
+    padding-right: 4;
+  }
+
+  .btn-icon {
+    width: 4;
+    height: 4;
+    object-fit: contain;
+    margin-left: 2;
   }
 
   #rain-button {
-    width: 100%;
-    padding: 1.5;
-    margin-top: 1;
-    background-color: #7b2ff2;
-    color: #fbbf24;
-    border-radius: 1.5;
-    border-width: 0;
-    font-size: 2.5;
-    font-weight: bold;
-    text-align: center;
-    cursor: pointer;
+    background-color: #6d28d9;
+    color: #ffffff;
   }
 
   #photo-button {
-    width: 100%;
-    padding: 1.5;
-    margin-top: 1;
-    background-color: #1a1a3e;
-    color: #c4b5fd;
-    border-color: #7b2ff2;
-    border-width: 0.15;
-    border-radius: 1.5;
-    font-size: 2.5;
-    font-weight: bold;
-    text-align: center;
-    cursor: pointer;
+    background-color: #0ea5e9;
+    color: #ffffff;
   }
 
   #world-button {
-    width: 100%;
-    padding: 1.5;
-    margin-top: 1;
-    background-color: #1a1a3e;
-    color: #c4b5fd;
-    border-color: #7b2ff2;
-    border-width: 0.15;
-    border-radius: 1.5;
-    font-size: 2.5;
-    font-weight: bold;
-    text-align: center;
-    cursor: pointer;
+    background-color: #10b981;
+    color: #ffffff;
   }
 
 </style>
 <div class="panel-container">
-  <img src="/SensAI-logo.png" alt="SensAI" class="logo" />
-  <span class="sub-heading">WebXR + SparkJS Template</span>
-  <div class="divider"></div>
-  <span class="event-line">sensaihack.com</span>
-  <button id="xr-button">Enter XR</button>
-  <button id="rain-button">Rain Toys</button>
-  <button id="photo-button">📷 Photo 0/6</button>
-  <button id="world-button">Switch World</button>
+  <img src="/Yume.png" alt="YUME" class="logo" />
+  <button id="rain-button" class="btn">
+    <img src="/icons/rain-white.png" class="btn-icon" />
+    Rain Toys
+  </button>
+  <button id="photo-button" class="btn">
+    <img src="/icons/camera-white.png" class="btn-icon" />
+    Photo 0/6
+  </button>
+  <button id="world-button" class="btn">
+    <img src="/icons/earth-white.png" class="btn-icon" />
+    Next World
+  </button>
 </div>

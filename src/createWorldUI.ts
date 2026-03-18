@@ -72,7 +72,7 @@ export function showCreateWorldUI(
         display: flex;
         align-items: center;
         justify-content: center;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: Nunito, sans-serif;
       }
       #cw-card {
         background: #1a0a2e;
