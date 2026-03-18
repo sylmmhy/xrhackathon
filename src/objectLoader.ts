@@ -45,7 +45,7 @@ function attachBlobShadow(model: THREE.Object3D, scene: THREE.Scene, footprint: 
       opacity: 0,
     }),
   );
-  shadowMesh.renderOrder = -5;
+  shadowMesh.renderOrder = 2; // render after splat (default 0) so it's visible
   scene.add(shadowMesh);
 
   const worldPos = new THREE.Vector3();

@@ -17,7 +17,7 @@ export function initPhotoSystem(world: World): void {
 
     const renderer = world.renderer as THREE.WebGLRenderer;
 
-    // Hide UI and controllers so they don't appear in the photo
+    // Hide UI, controllers, and ray lines so they don't appear in the photo
     globalThis.dispatchEvent(new Event("pre-capture"));
 
     const xr = renderer.xr;
@@ -27,17 +27,22 @@ export function initPhotoSystem(world: World): void {
     ];
     hiddenCtrls.forEach((c) => { if (c) c.visible = false; });
 
+    // Also hide any Line objects (IWSDK laser pointer rays)
+    const hiddenLines: THREE.Object3D[] = [];
+    world.scene.traverse((obj) => {
+      if ((obj instanceof THREE.Line || obj instanceof THREE.LineSegments) && obj.visible) {
+        obj.visible = false;
+        hiddenLines.push(obj);
+      }
+    });
+
     const size = renderer.getSize(new THREE.Vector2());
     const renderTarget = new THREE.WebGLRenderTarget(size.x, size.y);
 
-    // Disable XR temporarily — prevents the renderer from accessing XR framebuffers
-    // outside an active XR animation frame (which causes black frames).
-    // Force SRGBColorSpace: the XR manager switches outputColorSpace to Linear so
-    // the headset compositor handles gamma — we need to override it so Three.js
-    // materials (toys) output sRGB, matching SparkJS splat which always outputs sRGB.
-    const wasXR = renderer.xr.enabled;
+    // Keep XR enabled so Three.js material rendering stays in XR color mode.
+    // We redirect to our render target instead of the XR framebuffer.
+    // Force SRGBColorSpace so both Three.js materials and SparkJS splat output sRGB.
     const prevOutputCS = renderer.outputColorSpace;
-    renderer.xr.enabled = false;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const prevTarget = renderer.getRenderTarget();
@@ -47,10 +52,10 @@ export function initPhotoSystem(world: World): void {
     renderer.setRenderTarget(prevTarget);
 
     renderer.outputColorSpace = prevOutputCS;
-    renderer.xr.enabled = wasXR;
 
-    // Restore controllers and UI
+    // Restore controllers, ray lines, and UI
     hiddenCtrls.forEach((c) => { if (c) c.visible = true; });
+    hiddenLines.forEach((obj) => { obj.visible = true; });
     globalThis.dispatchEvent(new Event("post-capture"));
 
     // Read pixels (WebGL is bottom-to-top, flip Y, convert linear→sRGB)
