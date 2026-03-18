@@ -369,6 +369,258 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       countdownActive = true;
     });
 
+    // XR celebration message when all 6 photos are taken
+    const celebCanvas = document.createElement("canvas");
+    celebCanvas.width = 768; celebCanvas.height = 512;
+    const celebTexture = new THREE.CanvasTexture(celebCanvas);
+    celebTexture.colorSpace = THREE.SRGBColorSpace;
+    const celebMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.4, 0.93),
+      new THREE.MeshBasicMaterial({ map: celebTexture, transparent: true, depthTest: false }),
+    );
+    celebMesh.renderOrder = 20000;
+    celebMesh.frustumCulled = false;
+    celebMesh.visible = false;
+    world.scene.add(celebMesh);
+
+    // Photo strip display — shown briefly after celebration
+    const stripCanvas = document.createElement("canvas");
+    stripCanvas.width = 960; stripCanvas.height = 640;
+    const stripTexture = new THREE.CanvasTexture(stripCanvas);
+    stripTexture.colorSpace = THREE.SRGBColorSpace;
+    const stripMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.6, 1.07),
+      new THREE.MeshBasicMaterial({ map: stripTexture, transparent: true, depthTest: false }),
+    );
+    stripMesh.renderOrder = 20000;
+    stripMesh.frustumCulled = false;
+    stripMesh.visible = false;
+    world.scene.add(stripMesh);
+
+    function showPhotoStripDisplay(photos: string[]) {
+      const W = 960, H = 640;
+      const ctx = stripCanvas.getContext("2d")!;
+      ctx.clearRect(0, 0, W, H);
+
+      // Gradient background
+      const bg = ctx.createLinearGradient(0, 0, W, H);
+      bg.addColorStop(0, "rgba(255,248,240,0.94)");
+      bg.addColorStop(1, "rgba(240,230,255,0.94)");
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.roundRect(8, 8, W - 16, H - 16, 28);
+      ctx.fill();
+
+      // Rainbow border
+      const borderGrad = ctx.createLinearGradient(0, 0, W, 0);
+      borderGrad.addColorStop(0, "#3aaa35");
+      borderGrad.addColorStop(0.33, "#5ba3d9");
+      borderGrad.addColorStop(0.66, "#e53935");
+      borderGrad.addColorStop(1, "#7b2ff2");
+      ctx.strokeStyle = borderGrad;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(8, 8, W - 16, H - 16, 28);
+      ctx.stroke();
+
+      // Layout: 3 columns x 2 rows of polaroid photos
+      const cols = 3, rows = 2;
+      const padX = 40, padY = 50;
+      const gap = 16;
+      const cellW = (W - padX * 2 - gap * (cols - 1)) / cols;
+      const cellH = (H - padY * 2 - gap * (rows - 1)) / rows;
+      const photoInset = 8;
+      const bottomPad = 28;
+
+      let loaded = 0;
+      photos.forEach((dataURL, i) => {
+        const img = new Image();
+        img.onload = () => {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          const x = padX + col * (cellW + gap);
+          const y = padY + row * (cellH + gap);
+          const rotations = [-2, 1.5, -1, 2, -1.5, 1];
+          const rot = (rotations[i] ?? 0) * Math.PI / 180;
+
+          ctx.save();
+          ctx.translate(x + cellW / 2, y + cellH / 2);
+          ctx.rotate(rot);
+
+          // Polaroid shadow
+          ctx.shadowColor = "rgba(0,0,0,0.15)";
+          ctx.shadowBlur = 10;
+          ctx.shadowOffsetY = 4;
+
+          // White polaroid frame
+          ctx.fillStyle = "#fff";
+          ctx.beginPath();
+          ctx.roundRect(-cellW / 2, -cellH / 2, cellW, cellH, 4);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Photo inside frame
+          const photoW = cellW - photoInset * 2;
+          const photoH = cellH - photoInset - bottomPad;
+          ctx.drawImage(img, -cellW / 2 + photoInset, -cellH / 2 + photoInset, photoW, photoH);
+
+          // Label
+          ctx.fillStyle = "#7b2ff2";
+          ctx.font = "bold 14px Nunito, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`#${i + 1}`, 0, cellH / 2 - 10);
+
+          ctx.restore();
+
+          loaded++;
+          if (loaded === photos.length) {
+            stripTexture.needsUpdate = true;
+          }
+        };
+        img.src = dataURL;
+      });
+
+      // Position in front of camera
+      const cam = world.camera;
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+      stripMesh.position.copy(cam.position).addScaledVector(fwd, 1.3);
+      stripMesh.quaternion.copy(cam.quaternion);
+      stripMesh.visible = true;
+    }
+
+    globalThis.addEventListener("photos-complete", (e) => {
+      const photos = (e as CustomEvent).detail as string[];
+      const W = 768, H = 512;
+      const ctx = celebCanvas.getContext("2d")!;
+      ctx.clearRect(0, 0, W, H);
+
+      // Gradient background with rounded corners
+      const bg = ctx.createLinearGradient(0, 0, W, H);
+      bg.addColorStop(0, "rgba(255,248,240,0.94)");
+      bg.addColorStop(1, "rgba(240,230,255,0.94)");
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.roundRect(12, 12, W - 24, H - 24, 32);
+      ctx.fill();
+
+      // Subtle border with YUME gradient
+      const borderGrad = ctx.createLinearGradient(0, 0, W, 0);
+      borderGrad.addColorStop(0, "#3aaa35");
+      borderGrad.addColorStop(0.33, "#5ba3d9");
+      borderGrad.addColorStop(0.66, "#e53935");
+      borderGrad.addColorStop(1, "#7b2ff2");
+      ctx.strokeStyle = borderGrad;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.roundRect(12, 12, W - 24, H - 24, 32);
+      ctx.stroke();
+
+      // Decorative sparkles
+      const sparkles = [[120, 80], [650, 90], [100, 420], [670, 400], [384, 60], [200, 130], [580, 130]];
+      const sparkleColors = ["#3aaa35", "#5ba3d9", "#e53935", "#7b2ff2", "#f59e0b", "#3aaa35", "#e53935"];
+      sparkles.forEach(([x, y], i) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.fillStyle = sparkleColors[i];
+        ctx.globalAlpha = 0.6;
+        const size = 6 + Math.random() * 6;
+        // 4-point star
+        ctx.beginPath();
+        ctx.moveTo(0, -size);
+        ctx.lineTo(size * 0.3, -size * 0.3);
+        ctx.lineTo(size, 0);
+        ctx.lineTo(size * 0.3, size * 0.3);
+        ctx.lineTo(0, size);
+        ctx.lineTo(-size * 0.3, size * 0.3);
+        ctx.lineTo(-size, 0);
+        ctx.lineTo(-size * 0.3, -size * 0.3);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // Title — each word in a different YUME color
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "bold 52px Nunito, sans-serif";
+      const titleGrad = ctx.createLinearGradient(200, 0, 568, 0);
+      titleGrad.addColorStop(0, "#3aaa35");
+      titleGrad.addColorStop(0.35, "#5ba3d9");
+      titleGrad.addColorStop(0.65, "#e53935");
+      titleGrad.addColorStop(1, "#7b2ff2");
+      ctx.fillStyle = titleGrad;
+      ctx.fillText("Dreams Captured!", W / 2, 200);
+
+      // Divider line with gradient
+      const divGrad = ctx.createLinearGradient(W * 0.25, 0, W * 0.75, 0);
+      divGrad.addColorStop(0, "rgba(123,47,242,0)");
+      divGrad.addColorStop(0.5, "rgba(123,47,242,0.4)");
+      divGrad.addColorStop(1, "rgba(123,47,242,0)");
+      ctx.strokeStyle = divGrad;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(W * 0.2, 250);
+      ctx.lineTo(W * 0.8, 250);
+      ctx.stroke();
+
+      // Subtitle
+      ctx.font = "28px Nunito, sans-serif";
+      ctx.fillStyle = "#7b6b8a";
+      ctx.fillText("Photos saved to your device", W / 2, 310);
+
+      // YUME logo with rainbow gradient at bottom
+      const yumeImg = new Image();
+      yumeImg.src = "/Yume_BW.png";
+      yumeImg.onload = () => {
+        // Draw logo onto a temp canvas, then apply gradient via composite
+        const logoH = 70;
+        const logoW = logoH * (yumeImg.width / yumeImg.height);
+        const logoX = (W - logoW) / 2;
+        const logoY = 370 - logoH / 2;
+
+        const tmp = document.createElement("canvas");
+        tmp.width = W; tmp.height = H;
+        const tctx = tmp.getContext("2d")!;
+        tctx.drawImage(yumeImg, logoX, logoY, logoW, logoH);
+        // Replace black pixels with rainbow gradient
+        tctx.globalCompositeOperation = "source-in";
+        const logoGrad = tctx.createLinearGradient(logoX, 0, logoX + logoW, 0);
+        logoGrad.addColorStop(0, "#3aaa35");
+        logoGrad.addColorStop(0.33, "#5ba3d9");
+        logoGrad.addColorStop(0.66, "#e53935");
+        logoGrad.addColorStop(1, "#7b2ff2");
+        tctx.fillStyle = logoGrad;
+        tctx.fillRect(0, 0, W, H);
+
+        ctx.drawImage(tmp, 0, 0);
+        celebTexture.needsUpdate = true;
+      };
+
+      celebTexture.needsUpdate = true;
+
+      // Position in front of camera
+      const cam = world.camera;
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+      celebMesh.position.copy(cam.position).addScaledVector(fwd, 1.3);
+      celebMesh.quaternion.copy(cam.quaternion);
+      celebMesh.visible = true;
+
+      // Hide UI while celebration shows
+      countdownActive = true;
+
+      // After 4 seconds: hide celebration, show photo strip
+      setTimeout(() => {
+        celebMesh.visible = false;
+        showPhotoStripDisplay(photos);
+
+        // After another 5 seconds: hide strip, restore UI
+        setTimeout(() => {
+          stripMesh.visible = false;
+          countdownActive = false;
+        }, 5000);
+      }, 4000);
+    });
+
     // Hide UI during capture so it doesn't appear in the photo
     globalThis.addEventListener("pre-capture", () => {
       if (panelEntity.object3D) panelEntity.object3D.visible = false;

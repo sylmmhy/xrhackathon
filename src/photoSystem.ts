@@ -99,7 +99,16 @@ export function initPhotoSystem(world: World): void {
     globalThis.dispatchEvent(new CustomEvent("photo-taken", { detail: dataURL }));
 
     if (photos.length >= MAX_PHOTOS) {
-      setTimeout(() => showPolaroidStrip(photos), 600);
+      const isXR = (world.renderer as THREE.WebGLRenderer).xr.isPresenting;
+      if (isXR) {
+        // In XR: auto-download the strip and show a 3D celebration message
+        setTimeout(() => {
+          downloadStrip(photos);
+          globalThis.dispatchEvent(new CustomEvent("photos-complete", { detail: photos.slice() }));
+        }, 600);
+      } else {
+        setTimeout(() => showPolaroidStrip(photos), 600);
+      }
     }
   }
 
