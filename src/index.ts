@@ -228,7 +228,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     // Photo thumbnail strip — follows camera independently in XR
     // ------------------------------------------------------------
     const THUMB_W = 0.46, THUMB_H = 0.34;
-    const THUMB_GAP = 0.03;
+    const THUMB_GAP = 0.05;
     const ROW_GAP = 0.10; // extra vertical space between the two rows
     const THUMBS_PER_ROW = 3;
     const MAX_THUMBS = 6;
@@ -447,7 +447,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       panelEntity.object3D.position
         .copy(_camWorldPos)
         .addScaledVector(_panelFwd, 1.5)
-        .setY(_camWorldPos.y - 0.1);
+        .setY(_camWorldPos.y + 0.1);
       panelEntity.object3D.quaternion.copy(_camWorldQuat);
 
       // Photo strip: sit directly below the panel using its computed world position
@@ -459,7 +459,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         const panelWorldY = panelEntity.object3D.getWorldPosition(_camWorldPos.clone()).y;
         photoStrip.position
           .copy(panelEntity.object3D.getWorldPosition(new THREE.Vector3()))
-          .setY(panelWorldY - 0.90); // below panel bottom edge (2-row strip)
+          .setY(panelWorldY - 1.10); // compensated to keep strip at same position
         photoStrip.quaternion.copy(_camWorldQuat);
       }
     };
