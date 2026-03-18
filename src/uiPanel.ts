@@ -115,8 +115,6 @@ export class PanelSystem extends createSystem({
       if (!document) return;
 
       // Rain button
-
-      // Rain button
       const rainButton = document.getElementById("rain-button") as UIKit.Text;
       if (rainButton) {
         let lastRain = 0;
@@ -130,14 +128,33 @@ export class PanelSystem extends createSystem({
         });
       }
 
-      // Photo button
+      // Photo button with 3-2-1 countdown
       const photoButton = document.getElementById("photo-button") as UIKit.Text;
       if (photoButton) {
         let photoCount = 0;
+        let countingDown = false;
+
         photoButton.addEventListener("click", () => {
-          if (photoCount >= 6) return;
-          globalThis.dispatchEvent(new Event("take-photo"));
+          if (photoCount >= 6 || countingDown) return;
+          countingDown = true;
+
+          globalThis.dispatchEvent(new Event("countdown-start"));
+
+          let remaining = 3;
+          const tick = () => {
+            if (remaining > 0) {
+              photoButton.setProperties({ text: `📷  ${remaining}` });
+              globalThis.dispatchEvent(new CustomEvent("photo-countdown", { detail: remaining }));
+              remaining--;
+              setTimeout(tick, 1000);
+            } else {
+              countingDown = false;
+              globalThis.dispatchEvent(new Event("take-photo"));
+            }
+          };
+          tick();
         });
+
         globalThis.addEventListener("photo-count", (e) => {
           photoCount = (e as CustomEvent).detail;
           photoButton.setProperties({ text: photoCount >= 6 ? "📷 Done!" : `📷 Photo ${photoCount}/6` });

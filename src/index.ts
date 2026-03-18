@@ -284,10 +284,90 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       addPhotoThumb((e as CustomEvent).detail as string);
     });
 
+    // 3-2-1 countdown display — large number floating in front of camera
+    const cdCanvas = document.createElement("canvas");
+    cdCanvas.width = 256; cdCanvas.height = 256;
+    const cdTexture = new THREE.CanvasTexture(cdCanvas);
+    const cdMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.6, 0.6),
+      new THREE.MeshBasicMaterial({ map: cdTexture, transparent: true, depthTest: false }),
+    );
+    cdMesh.renderOrder = 20000;
+    cdMesh.frustumCulled = false;
+    cdMesh.visible = false;
+    world.scene.add(cdMesh);
+
+    let cdHideTimer: ReturnType<typeof setTimeout> | null = null;
+    globalThis.addEventListener("photo-countdown", (e) => {
+      const count = (e as CustomEvent).detail as number;
+      const ctx = cdCanvas.getContext("2d")!;
+      ctx.clearRect(0, 0, 256, 256);
+      // Circle background
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.beginPath();
+      ctx.arc(128, 128, 118, 0, Math.PI * 2);
+      ctx.fill();
+      // Number
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 150px -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(count), 128, 136);
+      cdTexture.needsUpdate = true;
+
+      cdMesh.visible = true;
+
+      if (cdHideTimer) clearTimeout(cdHideTimer);
+      cdHideTimer = setTimeout(() => { cdMesh.visible = false; }, 850);
+    });
+
+    // Viewfinder frame overlay shown during countdown
+    const fCanvas = document.createElement("canvas");
+    fCanvas.width = 512; fCanvas.height = 384;
+    const fCtx = fCanvas.getContext("2d")!;
+    // Draw corner-bracket viewfinder
+    const drawFrame = () => {
+      fCtx.clearRect(0, 0, 512, 384);
+      const W = 512, H = 384, L = 64, T = 10;
+      fCtx.strokeStyle = "#ffffff";
+      fCtx.lineWidth = T;
+      fCtx.lineCap = "round";
+      const corners: [number, number, number, number][] = [
+        [T/2, T/2, L, 0], [W-T/2, T/2, -L, 0],
+        [T/2, H-T/2, L, 0], [W-T/2, H-T/2, -L, 0],
+      ];
+      corners.forEach(([x, y, dx]) => {
+        const dy = y < H / 2 ? L : -L;
+        fCtx.beginPath(); fCtx.moveTo(x + dx, y); fCtx.lineTo(x, y); fCtx.lineTo(x, y + dy);
+        fCtx.stroke();
+      });
+    };
+    drawFrame();
+    const fTexture = new THREE.CanvasTexture(fCanvas);
+    const fMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.8, 1.35), // 4:3 ratio
+      new THREE.MeshBasicMaterial({ map: fTexture, transparent: true, depthTest: false }),
+    );
+    fMesh.renderOrder = 19999;
+    fMesh.frustumCulled = false;
+    fMesh.visible = false;
+    world.scene.add(fMesh);
+
+    let countdownActive = false;
+
+    globalThis.addEventListener("countdown-start", () => {
+      if (panelEntity.object3D) panelEntity.object3D.visible = false;
+      photoStrip.visible = false;
+      countdownActive = true;
+      fMesh.visible = true;
+    });
+
     // Hide UI during capture so it doesn't appear in the photo
     globalThis.addEventListener("pre-capture", () => {
       if (panelEntity.object3D) panelEntity.object3D.visible = false;
       photoStrip.visible = false;
+      countdownActive = false;
+      fMesh.visible = false;
     });
     globalThis.addEventListener("post-capture", () => {
       if (panelEntity.object3D) panelEntity.object3D.visible = panelVisible;
@@ -322,7 +402,19 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       const isXR = (world.renderer as THREE.WebGLRenderer).xr.isPresenting;
       if (!isXR || !panelEntity.object3D) {
         photoStrip.visible = false;
+        if (panelEntity.object3D) panelEntity.object3D.visible = !countdownActive && panelVisible;
         return;
+      }
+
+      // Keep viewfinder frame + countdown number in front of camera during countdown
+      if (countdownActive || fMesh.visible || cdMesh.visible) {
+        const cam = world.camera;
+        const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+        const base = cam.position.clone().addScaledVector(fwd, 1.4);
+        fMesh.position.copy(base);
+        fMesh.quaternion.copy(cam.quaternion);
+        cdMesh.position.copy(base);
+        cdMesh.quaternion.copy(cam.quaternion);
       }
 
       // Poll left controller menu button to toggle panel
@@ -351,9 +443,10 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       panelEntity.object3D.quaternion.copy(_camWorldQuat);
 
       // Photo strip: sit directly below the panel using its computed world position
-      photoStrip.visible = panelVisible && thumbIndex > 0;
-      panelEntity.object3D.visible = panelVisible;
-      if (panelVisible && thumbIndex > 0) {
+      const uiVisible = panelVisible && !countdownActive;
+      photoStrip.visible = uiVisible && thumbIndex > 0;
+      panelEntity.object3D.visible = uiVisible;
+      if (uiVisible && thumbIndex > 0) {
         panelEntity.object3D.updateWorldMatrix(true, false);
         const panelWorldY = panelEntity.object3D.getWorldPosition(_camWorldPos.clone()).y;
         photoStrip.position
