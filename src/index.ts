@@ -228,6 +228,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     // ------------------------------------------------------------
     const THUMB_W = 0.46, THUMB_H = 0.34;
     const THUMB_GAP = 0.03;
+    const ROW_GAP = 0.10; // extra vertical space between the two rows
     const THUMBS_PER_ROW = 3;
     const MAX_THUMBS = 6;
     const totalStripW = THUMBS_PER_ROW * THUMB_W + (THUMBS_PER_ROW - 1) * THUMB_GAP;
@@ -252,7 +253,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
       const x = -totalStripW / 2 + col * (THUMB_W + THUMB_GAP) + THUMB_W / 2;
       // Row 0 = top, row 1 = bottom
-      const y = row === 0 ? (THUMB_H + THUMB_GAP) / 2 : -((THUMB_H + THUMB_GAP) / 2);
+      const y = row === 0 ? (THUMB_H + ROW_GAP) / 2 : -((THUMB_H + ROW_GAP) / 2);
 
       const group = new THREE.Group();
       group.position.set(x, y, 0);
