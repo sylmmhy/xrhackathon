@@ -59,7 +59,8 @@
         "padding": "2",
         "width": "50",
         "display": "flex",
-        "flexDirection": "column"
+        "flexDirection": "column",
+        "fontFamily": "Patrick Hand"
       }
     },
     "logo": {
