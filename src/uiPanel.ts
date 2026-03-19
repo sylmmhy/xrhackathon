@@ -114,6 +114,15 @@ export class PanelSystem extends createSystem({
       ] as UIKitDocument;
       if (!document) return;
 
+      // World definitions (shared by rain + world buttons)
+      const worlds = [
+        { name: "Room", url: "./splats/Yume World (7)_room.splat", maxToys: 3 },
+        { name: "Treehouse", url: "./splats/Yume World (4)_treehouse.spz", position: [0, 0.14, 0], maxToys: 5 },
+        { name: "Yume World", url: "./splats/world_500k_yume_room.splat", maxToys: 5 },
+        { name: "Disney Castle", url: "./splats/disney_castle.spz", maxToys: 10 },
+      ];
+      let currentWorldIndex = 0;
+
       // Rain button
       const rainButton = document.getElementById("rain-button") as UIKit.Text;
       if (rainButton) {
@@ -124,7 +133,7 @@ export class PanelSystem extends createSystem({
           lastRain = now;
           rainButton.setProperties({ text: "Raining!" });
           globalThis.dispatchEvent(new Event("hide-ui")); // hide UI while raining
-          rainToys(this.world);
+          rainToys(this.world, worlds[currentWorldIndex]?.maxToys);
           setTimeout(() => rainButton.setProperties({ text: "Rain Toys" }), 3000);
         });
       }
@@ -165,14 +174,6 @@ export class PanelSystem extends createSystem({
       // Next World button — cycles through all worlds in order
       const worldButton = document.getElementById("world-button") as UIKit.Text;
       if (worldButton) {
-        const worlds = [
-          { name: "Room", url: "./splats/Yume World (7)_room.splat" },
-          { name: "Treehouse", url: "./splats/Yume World (4)_treehouse.spz", position: [0, 0.14, 0] },
-          { name: "Yume World", url: "./splats/world_500k_yume_room.splat" },
-          { name: "Disney Castle", url: "./splats/disney_castle.spz" },
-        ];
-        let currentWorldIndex = 0; // starts on Room (default loaded)
-
         worldButton.setProperties({ text: "Next World" });
 
         worldButton.addEventListener("click", () => {

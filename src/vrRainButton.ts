@@ -7,8 +7,9 @@ const TOY_MODELS = ["./SM_Aligator.glb", "./CuteFox.glb", "./GothicFox.glb"];
 /**
  * Spawn 2–10 random alligator/fox toys raining from the sky above the player.
  */
-export async function rainToys(world: World) {
-  const count = 2 + Math.floor(Math.random() * 9); // 2–10
+export async function rainToys(world: World, maxCount?: number) {
+  const limit = maxCount ?? 10;
+  const count = Math.min(2 + Math.floor(Math.random() * (limit - 1)), limit);
 
   const cam = world.camera;
   // Use world-space position/direction so toys rain in front of the player after locomotion
