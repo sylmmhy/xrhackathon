@@ -13,7 +13,7 @@ export async function rainToys(world: World) {
   const cam = world.camera;
   // Use actual look direction (including Y) so toys rain through the camera's field of view
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-  const center = cam.position.clone().addScaledVector(forward, 1);
+  const center = cam.position.clone().addScaledVector(forward, 2);
 
   for (let i = 0; i < count; i++) {
     const glbUrl = TOY_MODELS[Math.floor(Math.random() * TOY_MODELS.length)];

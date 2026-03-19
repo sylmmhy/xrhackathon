@@ -1,22 +1,26 @@
 <style>
   .panel-container {
     align-items: center;
-    padding: 2;
-    width: 50;
+    padding: 3;
+    width: 40;
     display: flex;
     flex-direction: column;
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 2.5;
+    border-color: rgba(255, 255, 255, 0.8);
+    border-width: 0.2;
   }
 
   .logo {
-    width: 48;
-    height: 18;
+    width: 22;
+    height: 8;
     object-fit: contain;
-    margin-bottom: 1;
+    margin-bottom: 0.3;
   }
 
   .btn {
-    width: 66%;
-    margin-top: 1;
+    width: 99%;
+    margin-top: 1.5;
     border-radius: 2;
     border-width: 0;
     font-size: 2.5;

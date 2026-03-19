@@ -137,7 +137,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       cam.getWorldPosition(_p);
       cam.getWorldQuaternion(_q);
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_q);
-      loadMesh.position.copy(_p).addScaledVector(fwd, 1.5);
+      loadMesh.position.copy(_p).addScaledVector(fwd, 1.9);
       loadMesh.quaternion.copy(_q);
       loadMesh.visible = true;
     }
@@ -607,7 +607,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       cam.getWorldPosition(_sPos);
       cam.getWorldQuaternion(_sQuat);
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_sQuat);
-      stripMesh.position.copy(_sPos).addScaledVector(fwd, 1.3);
+      stripMesh.position.copy(_sPos).addScaledVector(fwd, 1.7);
       stripMesh.quaternion.copy(_sQuat);
       stripMesh.visible = true;
     }
@@ -729,7 +729,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       cam.getWorldPosition(_cPos);
       cam.getWorldQuaternion(_cQuat);
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_cQuat);
-      celebMesh.position.copy(_cPos).addScaledVector(fwd, 1.3);
+      celebMesh.position.copy(_cPos).addScaledVector(fwd, 1.7);
       celebMesh.quaternion.copy(_cQuat);
       celebMesh.visible = true;
 
@@ -821,11 +821,11 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         cam.getWorldPosition(_cdPos);
         cam.getWorldQuaternion(_cdQuat);
         const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_cdQuat);
-        const base = _cdPos.clone().addScaledVector(fwd, 1.4);
+        const base = _cdPos.clone().addScaledVector(fwd, 1.8);
         fMesh.position.copy(base);
         fMesh.quaternion.copy(_cdQuat);
         if (loadMesh.visible) {
-          loadMesh.position.copy(_cdPos).addScaledVector(fwd, 1.5);
+          loadMesh.position.copy(_cdPos).addScaledVector(fwd, 1.9);
           loadMesh.quaternion.copy(_cdQuat);
         }
         cdMesh.position.copy(base);
@@ -853,7 +853,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       // Panel: 1.5 m ahead, slightly below eye level
       panelEntity.object3D.position
         .copy(_camWorldPos)
-        .addScaledVector(_panelFwd, 1.5)
+        .addScaledVector(_panelFwd, 2.0)
         .setY(_camWorldPos.y + 0.1);
       panelEntity.object3D.quaternion.copy(_camWorldQuat);
 

@@ -21,9 +21,7 @@ export function initPhotoSystem(world: World): void {
     // We use Three.js layers instead of visible=false — this survives IWSDK's own
     // update loop that may re-enable visibility during renderer.render().
     // Camera default layers.mask = 1 (layer 0 only) → objects on layer 31 are skipped.
-    if (!captureRetrying) {
-      globalThis.dispatchEvent(new Event("pre-capture"));
-    }
+    globalThis.dispatchEvent(new Event("pre-capture"));
 
     const xr = renderer.xr;
     const ctrlGroups = [
@@ -151,10 +149,8 @@ export function initPhotoSystem(world: World): void {
       // Mostly black — retry on next frame (skip pre/post-capture to avoid flicker)
       console.warn("[photoSystem] Black frame detected, retrying...");
       captureRequested = true;
-      captureRetrying = true;
       return;
     }
-    captureRetrying = false;
 
     // Both splat (encodeLinear=false) and toys (textures set to linear passthrough)
     // output raw sRGB values — just flip Y, no color conversion needed.
@@ -202,12 +198,10 @@ export function initPhotoSystem(world: World): void {
   // A microtask from onBeforeRender runs AFTER renderer.render() returns
   // (no nested render) but while XR camera matrices are still valid.
   let captureRequested = false;
-  let captureRetrying = false; // true when retrying after black frame
 
   globalThis.addEventListener("take-photo", () => {
     if (photos.length >= MAX_PHOTOS) return;
     captureRequested = true;
-    captureRetrying = false;
   });
 
   const capturePollMesh = new THREE.Mesh(
