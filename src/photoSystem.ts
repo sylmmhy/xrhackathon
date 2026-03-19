@@ -38,6 +38,11 @@ export function initPhotoSystem(world: World): void {
     // Controller groups + all descendants (ray beam CylinderMesh is a child)
     ctrlGroups.forEach((c) => { if (c) c.traverse(moveToLayer31); });
 
+    // IWSDK ray beams live in world.player.raySpaces (separate from Three.js controllers)
+    const player = (world as any).player as any;
+    if (player?.raySpaces?.left) player.raySpaces.left.traverse(moveToLayer31);
+    if (player?.raySpaces?.right) player.raySpaces.right.traverse(moveToLayer31);
+
     // IWSDK cursor dot (CircleGeometry) is added to xrOrigin (not the controller)
     // and tagged with userData.attached = true. Also catch any stray Lines.
     world.scene.traverse((obj) => {
@@ -48,8 +53,19 @@ export function initPhotoSystem(world: World): void {
       }
     });
 
-    const size = renderer.getSize(new THREE.Vector2());
-    const renderTarget = new THREE.WebGLRenderTarget(size.x, size.y);
+    // Force 4:3 aspect ratio for photo capture
+    const PHOTO_W = 1200;
+    const PHOTO_H = 900;
+    const renderTarget = new THREE.WebGLRenderTarget(PHOTO_W, PHOTO_H);
+
+    // Create a narrower FOV camera for photo capture to reduce wide-angle distortion.
+    // Copy world position/rotation from the XR camera so the photo matches what you see.
+    const PHOTO_FOV = 50;
+    const photoCam = new THREE.PerspectiveCamera(PHOTO_FOV, PHOTO_W / PHOTO_H, 0.1, 1000);
+    const cam = world.camera;
+    cam.getWorldPosition(photoCam.position);
+    cam.getWorldQuaternion(photoCam.quaternion);
+    photoCam.updateMatrixWorld();
 
     // Keep XR enabled so Three.js material rendering stays in XR color mode.
     // We redirect to our render target instead of the XR framebuffer.
@@ -57,11 +73,21 @@ export function initPhotoSystem(world: World): void {
     const prevOutputCS = renderer.outputColorSpace;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
+    // Temporarily disable XR so the XR manager doesn't override our viewport/camera
+    const wasXrEnabled = renderer.xr.enabled;
+    renderer.xr.enabled = false;
+
     const prevTarget = renderer.getRenderTarget();
     renderer.setRenderTarget(renderTarget);
+    renderer.setViewport(0, 0, PHOTO_W, PHOTO_H);
+    renderer.setScissor(0, 0, PHOTO_W, PHOTO_H);
+    renderer.setScissorTest(true);
     renderer.clear();
-    renderer.render(world.scene, world.camera as THREE.Camera);
+    renderer.render(world.scene, photoCam);
+    renderer.setScissorTest(false);
     renderer.setRenderTarget(prevTarget);
+
+    renderer.xr.enabled = wasXrEnabled;
 
     renderer.outputColorSpace = prevOutputCS;
 
@@ -70,19 +96,19 @@ export function initPhotoSystem(world: World): void {
     globalThis.dispatchEvent(new Event("post-capture"));
 
     // Read pixels (WebGL is bottom-to-top, flip Y, convert linear→sRGB)
-    const pixels = new Uint8Array(size.x * size.y * 4);
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, size.x, size.y, pixels);
+    const pixels = new Uint8Array(PHOTO_W * PHOTO_H * 4);
+    renderer.readRenderTargetPixels(renderTarget, 0, 0, PHOTO_W, PHOTO_H, pixels);
     renderTarget.dispose();
 
     const offscreen = document.createElement("canvas");
-    offscreen.width = size.x;
-    offscreen.height = size.y;
+    offscreen.width = PHOTO_W;
+    offscreen.height = PHOTO_H;
     const ctx = offscreen.getContext("2d")!;
-    const imageData = ctx.createImageData(size.x, size.y);
-    for (let y = 0; y < size.y; y++) {
-      for (let x = 0; x < size.x; x++) {
-        const src = ((size.y - 1 - y) * size.x + x) * 4;
-        const dst = (y * size.x + x) * 4;
+    const imageData = ctx.createImageData(PHOTO_W, PHOTO_H);
+    for (let y = 0; y < PHOTO_H; y++) {
+      for (let x = 0; x < PHOTO_W; x++) {
+        const src = ((PHOTO_H - 1 - y) * PHOTO_W + x) * 4;
+        const dst = (y * PHOTO_W + x) * 4;
         imageData.data[dst]     = pixels[src];
         imageData.data[dst + 1] = pixels[src + 1];
         imageData.data[dst + 2] = pixels[src + 2];
@@ -213,10 +239,20 @@ function showPolaroidStrip(photos: string[]): void {
 }
 
 function downloadStrip(photos: string[]): void {
-  const PW = 176;
-  const PH = 210;
+  // Determine actual photo aspect ratio from first image before drawing
+  const firstImg = new Image();
+  firstImg.src = photos[0];
+  firstImg.onload = () => {
+    const photoAspect = firstImg.naturalWidth / firstImg.naturalHeight;
+    _drawStrip(photos, photoAspect);
+  };
+}
+
+function _drawStrip(photos: string[], photoAspect: number): void {
   const PHOTO_W = 158;
-  const PHOTO_H = 116;
+  const PHOTO_H = Math.round(PHOTO_W / photoAspect);
+  const PW = PHOTO_W + 18;
+  const PH = PHOTO_H + 8 + 6 + 14; // top pad + photo + gap + label+bottom
   const PAD = 16;
 
   const canvas = document.createElement("canvas");
@@ -249,7 +285,7 @@ function downloadStrip(photos: string[]): void {
       ctx.fillStyle = "#7b2ff2";
       ctx.font = "12px Nunito, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(`#${i + 1}`, x + PW / 2, y + PH - 8);
+      ctx.fillText(`#${i + 1}`, x + PW / 2, y + 8 + PHOTO_H + 16);
 
       loaded++;
       if (loaded === photos.length) {

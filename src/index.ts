@@ -122,6 +122,13 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         try { await splatSystem.unload(splatEntity, { animate: false }); } catch {}
         return;
       }
+
+      // Reset player position and rotation to origin after world switch
+      const player = (world as any).player as THREE.Object3D | undefined;
+      if (player) {
+        player.position.set(0, 0, 0);
+        player.quaternion.set(0, 0, 0, 1);
+      }
     }
 
     globalThis.addEventListener("switch-world", async (e) => {
@@ -415,11 +422,11 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
     // Photo strip display — shown briefly after celebration
     const stripCanvas = document.createElement("canvas");
-    stripCanvas.width = 960; stripCanvas.height = 640;
+    stripCanvas.width = 960; stripCanvas.height = 800;
     const stripTexture = new THREE.CanvasTexture(stripCanvas);
     stripTexture.colorSpace = THREE.SRGBColorSpace;
     const stripMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.6, 1.07),
+      new THREE.PlaneGeometry(1.4, 1.17),
       new THREE.MeshBasicMaterial({ map: stripTexture, transparent: true, depthTest: false }),
     );
     stripMesh.renderOrder = 20000;
@@ -428,7 +435,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     world.scene.add(stripMesh);
 
     function showPhotoStripDisplay(photos: string[]) {
-      const W = 960, H = 640;
+      const W = 960, H = 800;
       const ctx = stripCanvas.getContext("2d")!;
       ctx.clearRect(0, 0, W, H);
 
@@ -453,14 +460,34 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       ctx.roundRect(8, 8, W - 16, H - 16, 28);
       ctx.stroke();
 
-      // Layout: 3 columns x 2 rows of polaroid photos
+      // Layout: 3 columns x 2 rows — load logo + measure first image aspect ratio
       const cols = 3, rows = 2;
-      const padX = 40, padY = 50;
+      const padX = 40;
       const gap = 16;
-      const cellW = (W - padX * 2 - gap * (cols - 1)) / cols;
-      const cellH = (H - padY * 2 - gap * (rows - 1)) / rows;
       const photoInset = 8;
-      const bottomPad = 28;
+      const labelH = 22;
+      const logoH = 180;
+      const padYTop = 30 + logoH + 16; // top padding + logo + gap below logo
+      const padYBottom = 30;
+
+      // Load YUME logo and first photo to get aspect ratio
+      const logoImg = new Image();
+      logoImg.src = "/Yume.png";
+      const probeImg = new Image();
+      probeImg.src = photos[0];
+
+      let logoLoaded = false, probeLoaded = false;
+      const onBothReady = () => {
+        if (!logoLoaded || !probeLoaded) return;
+        const photoAspect = probeImg.naturalWidth / probeImg.naturalHeight;
+        const photoW = (W - padX * 2 - gap * (cols - 1) - photoInset * 2 * cols) / cols;
+        const photoH = photoW / photoAspect;
+        const cellW = photoW + photoInset * 2;
+        const cellH = photoH + photoInset + labelH;
+
+        // Draw YUME logo centered at top
+        const logoW = logoH * (logoImg.naturalWidth / logoImg.naturalHeight);
+        ctx.drawImage(logoImg, (W - logoW) / 2, 28, logoW, logoH);
 
       let loaded = 0;
       photos.forEach((dataURL, i) => {
@@ -469,7 +496,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
           const col = i % cols;
           const row = Math.floor(i / cols);
           const x = padX + col * (cellW + gap);
-          const y = padY + row * (cellH + gap);
+          const y = padYTop + row * (cellH + gap);
           const rotations = [-2, 1.5, -1, 2, -1.5, 1];
           const rot = (rotations[i] ?? 0) * Math.PI / 180;
 
@@ -489,16 +516,14 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // Photo inside frame
-          const photoW = cellW - photoInset * 2;
-          const photoH = cellH - photoInset - bottomPad;
+          // Photo inside frame — correct aspect ratio
           ctx.drawImage(img, -cellW / 2 + photoInset, -cellH / 2 + photoInset, photoW, photoH);
 
           // Label
           ctx.fillStyle = "#7b2ff2";
           ctx.font = "bold 14px Nunito, sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText(`#${i + 1}`, 0, cellH / 2 - 10);
+          ctx.fillText(`#${i + 1}`, 0, cellH / 2 - 6);
 
           ctx.restore();
 
@@ -509,6 +534,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         };
         img.src = dataURL;
       });
+      }; // end onBothReady
+      logoImg.onload = () => { logoLoaded = true; onBothReady(); };
+      probeImg.onload = () => { probeLoaded = true; onBothReady(); };
 
       // Position in front of camera (world-space for XR locomotion)
       const cam = world.camera;
