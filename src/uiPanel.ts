@@ -166,9 +166,9 @@ export class PanelSystem extends createSystem({
       const worldButton = document.getElementById("world-button") as UIKit.Text;
       if (worldButton) {
         const worlds = [
-          { name: "Room", url: "./splats/Yume World (6)_room.spz", position: [0, 0.94, 0] },
+          { name: "Room", url: "./splats/Yume World (7)_room.splat" },
           { name: "Treehouse", url: "./splats/Yume World (4)_treehouse.spz", position: [0, 0.14, 0] },
-          { name: "Yume World", url: "./splats/world_500k_edit_6_4.splat", position: [0, 0.05, 0] },
+          { name: "Yume World", url: "./splats/world_500k_yume_room.splat" },
           { name: "Disney Castle", url: "./splats/disney_castle.spz" },
         ];
         let currentWorldIndex = 0; // starts on Room (default loaded)

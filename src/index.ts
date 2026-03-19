@@ -166,7 +166,15 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
           position?.[0] ?? 0, position?.[1] ?? 0, position?.[2] ?? 0,
         );
         if (splatUrl.endsWith(".splat")) {
-          splatEntity.object3D.quaternion.set(1, 0, 0, 0);
+          // 180° X rotation (Y-flip for .splat format)
+          const qX = new THREE.Quaternion().set(1, 0, 0, 0);
+          if (splatUrl.includes("room")) {
+            // Also rotate 180° Y so player faces the other side
+            const qY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+            splatEntity.object3D.quaternion.copy(qY.multiply(qX));
+          } else {
+            splatEntity.object3D.quaternion.copy(qX);
+          }
         } else {
           splatEntity.object3D.quaternion.set(0, 0, 0, 1);
         }
@@ -184,7 +192,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
       hideLoadingText();
 
-      // Reset player position and rotation to origin after world switch
+      // Reset player to origin facing default direction
       const player = (world as any).player as THREE.Object3D | undefined;
       if (player) {
         player.position.set(0, 0, 0);
@@ -527,9 +535,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       const gap = 16;
       const photoInset = 8;
       const labelH = 22;
-      const logoH = 180;
-      const padYTop = 30 + logoH + 16; // top padding + logo + gap below logo
-      const padYBottom = 30;
+      const logoH = 120;
+      const padYTop = 50 + logoH + 36; // top padding + logo + gap below logo
+      const padYBottom = 50;
 
       // Load YUME logo and first photo to get aspect ratio
       const logoImg = new Image();
@@ -548,7 +556,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
         // Draw YUME logo centered at top
         const logoW = logoH * (logoImg.naturalWidth / logoImg.naturalHeight);
-        ctx.drawImage(logoImg, (W - logoW) / 2, 28, logoW, logoH);
+        ctx.drawImage(logoImg, (W - logoW) / 2, 50, logoW, logoH);
 
       let loaded = 0;
       photos.forEach((dataURL, i) => {
@@ -894,7 +902,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       await splatSystem.load(splatEntity, { animate: true });
     }
 
-    const directSplat = params.get("splat") || "./splats/Yume World (6)_room.spz";
+    const directSplat = params.get("splat") || "./splats/Yume World (7)_room.splat";
 
     if (directSplat) {
       // Direct splat URL: load it immediately, skip create UI
@@ -918,30 +926,12 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       }, 400);
 
       countdownActive = true;
-      const defaultPos = directSplat.includes("room") ? [0, 0.94, 0] : directSplat.includes("treehouse") ? [0, 0.14, 0] : undefined;
+      const defaultPos = directSplat.includes("treehouse") ? [0, 0.14, 0] : undefined;
       switchToWorld(directSplat, false, defaultPos)
         .catch((err) => console.error("[World] Default world load failed:", err))
         .then(async () => {
           clearInterval(overlayDotsInterval);
           loadingOverlay.remove();
-          // Load GLB models
-          const testGlb = params.get("glb") || "./SM_Aligator.glb";
-          if (testGlb) {
-            spawnGLBFromUrl(world, testGlb).catch((err) =>
-              console.error("[World] Failed to load test GLB:", err),
-            );
-          }
-
-          // Gothic Fox – placed to the left
-          spawnGLBFromUrl(world, "./GothicFox.glb", new THREE.Vector3(-1.5, 0.5, -2)).catch((err) =>
-            console.error("[World] Failed to load GothicFox:", err),
-          );
-
-          // Cute Fox – placed to the right
-          spawnGLBFromUrl(world, "./CuteFox.glb", new THREE.Vector3(1.5, 0.5, -2)).catch((err) =>
-            console.error("[World] Failed to load CuteFox:", err),
-          );
-
           // Use existing world_id or create one via test endpoint for Meshy upload
           let splatWorldId: string = worldId || "";
           if (!splatWorldId && apiBase) {

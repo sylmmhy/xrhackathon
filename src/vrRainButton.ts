@@ -11,9 +11,13 @@ export async function rainToys(world: World) {
   const count = 2 + Math.floor(Math.random() * 9); // 2–10
 
   const cam = world.camera;
-  // Use actual look direction (including Y) so toys rain through the camera's field of view
-  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-  const center = cam.position.clone().addScaledVector(forward, 2);
+  // Use world-space position/direction so toys rain in front of the player after locomotion
+  const camWorldPos = new THREE.Vector3();
+  const camWorldQuat = new THREE.Quaternion();
+  cam.getWorldPosition(camWorldPos);
+  cam.getWorldQuaternion(camWorldQuat);
+  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camWorldQuat);
+  const center = camWorldPos.addScaledVector(forward, 2);
 
   for (let i = 0; i < count; i++) {
     const glbUrl = TOY_MODELS[Math.floor(Math.random() * TOY_MODELS.length)];

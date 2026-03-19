@@ -108,7 +108,7 @@ export async function spawnGLBFromUrl(
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z);
   if (maxDim > 0) {
-    const scale = 1.0 / maxDim;
+    const scale = 0.75 / maxDim;
     model.scale.multiplyScalar(scale);
   }
 
@@ -135,7 +135,7 @@ export async function spawnGLBFromUrl(
     .createTransformEntity(model)
     .addComponent(Interactable)
     .addComponent(DistanceGrabbable, {
-      movementMode: MovementMode.MoveAtSource,
+      movementMode: MovementMode.MoveWithSource,
       translate: true,
       rotate: true,
       scale: false,

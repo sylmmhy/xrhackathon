@@ -86,8 +86,11 @@
     "panel-container": {
       "content": {
         "alignItems": "center",
-        "padding": "3",
-        "width": "40",
+        "paddingLeft": "2.5",
+        "paddingRight": "2.5",
+        "paddingTop": "2",
+        "paddingBottom": "3",
+        "width": "34",
         "display": "flex",
         "flexDirection": "column",
         "backgroundColor": "rgba(255, 255, 255, 0.4)",
@@ -98,16 +101,16 @@
     },
     "logo": {
       "content": {
-        "width": "22",
-        "height": "8",
+        "width": "20",
+        "height": "7",
         "objectFit": "contain",
-        "marginBottom": "0.3"
+        "marginBottom": "1"
       }
     },
     "btn": {
       "content": {
         "width": "99%",
-        "marginTop": "1.5",
+        "marginTop": "1.2",
         "borderRadius": 2,
         "borderWidth": "0",
         "fontSize": "2.5",
@@ -116,8 +119,8 @@
         "display": "flex",
         "flexDirection": "row",
         "alignItems": "center",
-        "paddingTop": "1.5",
-        "paddingBottom": "1.5",
+        "paddingTop": "1.2",
+        "paddingBottom": "1.2",
         "paddingLeft": "1.5",
         "paddingRight": "4"
       }
@@ -133,19 +136,29 @@
     "__id__rain-button": {
       "content": {
         "backgroundColor": "#6d28d9",
-        "color": "#ffffff"
+        "color": "#ffffff",
+        "marginTop": "1.2",
+        "hover": {
+          "backgroundColor": "#8b5cf6"
+        }
       }
     },
     "__id__photo-button": {
       "content": {
         "backgroundColor": "#0ea5e9",
-        "color": "#ffffff"
+        "color": "#ffffff",
+        "hover": {
+          "backgroundColor": "#38bdf8"
+        }
       }
     },
     "__id__world-button": {
       "content": {
         "backgroundColor": "#10b981",
-        "color": "#ffffff"
+        "color": "#ffffff",
+        "hover": {
+          "backgroundColor": "#34d399"
+        }
       }
     }
   },
@@ -162,141 +175,141 @@
     },
     "logo": {
       "start": {
-        "line": 13,
+        "line": 16,
         "column": 2
       },
       "end": {
-        "line": 13,
+        "line": 16,
         "column": 7
       }
     },
     "btn": {
       "start": {
-        "line": 20,
+        "line": 23,
         "column": 2
       },
       "end": {
-        "line": 20,
+        "line": 23,
         "column": 6
       }
     },
     "btn-icon": {
       "start": {
-        "line": 37,
+        "line": 40,
         "column": 2
       },
       "end": {
-        "line": 37,
+        "line": 40,
         "column": 11
       }
     },
     "__id__rain-button": {
       "start": {
-        "line": 44,
+        "line": 47,
         "column": 2
       },
       "end": {
-        "line": 44,
+        "line": 47,
         "column": 14
       }
     },
     "__id__photo-button": {
       "start": {
-        "line": 49,
+        "line": 56,
         "column": 2
       },
       "end": {
-        "line": 49,
+        "line": 56,
         "column": 15
       }
     },
     "__id__world-button": {
       "start": {
-        "line": 54,
+        "line": 64,
         "column": 2
       },
       "end": {
-        "line": 54,
+        "line": 64,
         "column": 15
       }
     },
     "uid-1": {
       "start": {
-        "line": 60,
+        "line": 73,
         "column": 0
       },
       "end": {
-        "line": 74,
+        "line": 87,
         "column": 6
       }
     },
     "uid-2": {
       "start": {
-        "line": 61,
+        "line": 74,
         "column": 2
       },
       "end": {
-        "line": 61,
+        "line": 74,
         "column": 49
       }
     },
     "uid-3": {
       "start": {
-        "line": 62,
+        "line": 75,
         "column": 2
       },
       "end": {
-        "line": 65,
+        "line": 78,
         "column": 11
       }
     },
     "uid-4": {
       "start": {
-        "line": 63,
+        "line": 76,
         "column": 4
       },
       "end": {
-        "line": 63,
+        "line": 76,
         "column": 56
       }
     },
     "uid-5": {
       "start": {
-        "line": 66,
+        "line": 79,
         "column": 2
       },
       "end": {
-        "line": 69,
+        "line": 82,
         "column": 11
       }
     },
     "uid-6": {
       "start": {
-        "line": 67,
+        "line": 80,
         "column": 4
       },
       "end": {
-        "line": 67,
+        "line": 80,
         "column": 58
       }
     },
     "uid-7": {
       "start": {
-        "line": 70,
+        "line": 83,
         "column": 2
       },
       "end": {
-        "line": 73,
+        "line": 86,
         "column": 11
       }
     },
     "uid-8": {
       "start": {
-        "line": 71,
+        "line": 84,
         "column": 4
       },
       "end": {
-        "line": 71,
+        "line": 84,
         "column": 57
       }
     }

@@ -225,30 +225,40 @@ export function initPhotoSystem(world: World): void {
   });
 }
 
+// Shared AudioContext — created once, reused for all sounds (Quest limits context count)
+let _audioCtx: AudioContext | null = null;
+let _shutterBuf: AudioBuffer | null = null;
+
+function getAudioCtx(): AudioContext {
+  if (!_audioCtx) {
+    _audioCtx = new (globalThis.AudioContext || (globalThis as any).webkitAudioContext)();
+  }
+  if (_audioCtx.state === "suspended") _audioCtx.resume();
+  return _audioCtx;
+}
+
 function playShutterSound(): void {
   try {
-    const ctx = new (globalThis.AudioContext || (globalThis as any).webkitAudioContext)();
+    const ctx = getAudioCtx();
 
-    // Click 1: sharp transient (shutter open)
-    const clickBuf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
-    const clickData = clickBuf.getChannelData(0);
-    for (let i = 0; i < clickData.length; i++) {
-      const t = i / ctx.sampleRate;
-      clickData[i] = (Math.random() * 2 - 1) * Math.exp(-t * 120) * 0.6;
+    if (!_shutterBuf) {
+      _shutterBuf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+      const data = _shutterBuf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        const t = i / ctx.sampleRate;
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 120) * 0.6;
+      }
     }
+
     const click1 = ctx.createBufferSource();
-    click1.buffer = clickBuf;
+    click1.buffer = _shutterBuf;
     click1.connect(ctx.destination);
     click1.start(ctx.currentTime);
 
-    // Click 2: second transient (shutter close) after 80ms
     const click2 = ctx.createBufferSource();
-    click2.buffer = clickBuf;
+    click2.buffer = _shutterBuf;
     click2.connect(ctx.destination);
     click2.start(ctx.currentTime + 0.08);
-
-    // Cleanup
-    setTimeout(() => ctx.close(), 500);
   } catch {}
 }
 
