@@ -88,32 +88,59 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     });
 
     // Listen for world switch from panel UI
-    globalThis.addEventListener("switch-world", async (e) => {
+    let worldSwitching = false;
+    let loadGeneration = 0; // tracks which load is current; stale loads are discarded
+
+    async function switchToWorld(splatUrl: string, autoFit = false, position?: number[]) {
+      // Increment generation so any in-progress load becomes stale
+      const thisGen = ++loadGeneration;
+
       clearSpawnedObjects(world.scene);
+
+      // Force-unload whatever is currently loaded (or in-progress)
+      try { await splatSystem.unload(splatEntity, { animate: false }); } catch {}
+
+      // Configure new world
+      splatEntity.setValue(GaussianSplatLoader, "splatUrl", splatUrl);
+      splatEntity.setValue(GaussianSplatLoader, "autoFit", !!autoFit);
+      if (splatEntity.object3D) {
+        splatEntity.object3D.position.set(
+          position?.[0] ?? 0, position?.[1] ?? 0, position?.[2] ?? 0,
+        );
+        if (splatUrl.endsWith(".splat")) {
+          splatEntity.object3D.quaternion.set(1, 0, 0, 0);
+        } else {
+          splatEntity.object3D.quaternion.set(0, 0, 0, 1);
+        }
+        splatEntity.object3D.scale.setScalar(1.0);
+      }
+
+      await splatSystem.load(splatEntity, { animate: true });
+
+      // If a newer load started while we were loading, remove ourselves (stale)
+      if (loadGeneration !== thisGen) {
+        try { await splatSystem.unload(splatEntity, { animate: false }); } catch {}
+        return;
+      }
+    }
+
+    globalThis.addEventListener("switch-world", async (e) => {
+      // Force panel hidden during switch
+      countdownActive = true;
+      if (panelEntity.object3D) panelEntity.object3D.visible = false;
+      photoStrip.visible = false;
+
       const { splatUrl, autoFit, position } = (e as CustomEvent).detail;
       try {
-        await splatSystem.unload(splatEntity, { animate: true });
-        splatEntity.setValue(GaussianSplatLoader, "splatUrl", splatUrl);
-        splatEntity.setValue(GaussianSplatLoader, "autoFit", !!autoFit);
-        if (position && splatEntity.object3D) {
-          splatEntity.object3D.position.set(position[0], position[1], position[2]);
-        } else if (splatEntity.object3D) {
-          splatEntity.object3D.position.set(0, 0, 0);
-        }
-        // Apply orientation fix on parent BEFORE load so it's correct during animation
-        if (splatUrl.includes("world_500k") && splatEntity.object3D) {
-          splatEntity.object3D.quaternion.set(1, 0, 0, 0);
-          splatEntity.object3D.scale.setScalar(1.0);
-          splatEntity.object3D.position.y = 0.05;
-        } else if (splatEntity.object3D) {
-          splatEntity.object3D.quaternion.set(0, 0, 0, 1); // identity
-          splatEntity.object3D.scale.setScalar(1.0);
-        }
-        await splatSystem.load(splatEntity, { animate: true });
+        await switchToWorld(splatUrl, autoFit, position);
       } catch (err) {
         console.error("[World] Failed to switch world:", err);
       }
       globalThis.dispatchEvent(new Event("switch-world-done"));
+
+      // Keep UI hidden after switch — user presses Y to show
+      if (panelEntity.object3D) panelEntity.object3D.visible = false;
+      photoStrip.visible = false;
     });
 
     
@@ -124,7 +151,9 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     floorGeometry.rotateX(-Math.PI / 2);
     const floor = new Mesh(floorGeometry, new MeshBasicMaterial());
     floor.visible = false;
-    world
+
+    // Defer floor entity creation so locomotor is initialized
+    setTimeout(() => { world
       .createTransformEntity(floor)
       .addComponent(LocomotionEnvironment, { type: EnvironmentType.STATIC })
       .addComponent(PhysicsBody, { state: PhysicsState.Static })
@@ -134,6 +163,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         friction: 0.8,
         restitution: 0.3,
       });
+    }, 100);
 
 
 
@@ -480,11 +510,15 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         img.src = dataURL;
       });
 
-      // Position in front of camera
+      // Position in front of camera (world-space for XR locomotion)
       const cam = world.camera;
-      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-      stripMesh.position.copy(cam.position).addScaledVector(fwd, 1.3);
-      stripMesh.quaternion.copy(cam.quaternion);
+      const _sPos = new THREE.Vector3();
+      const _sQuat = new THREE.Quaternion();
+      cam.getWorldPosition(_sPos);
+      cam.getWorldQuaternion(_sQuat);
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_sQuat);
+      stripMesh.position.copy(_sPos).addScaledVector(fwd, 1.3);
+      stripMesh.quaternion.copy(_sQuat);
       stripMesh.visible = true;
     }
 
@@ -598,11 +632,15 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
       celebTexture.needsUpdate = true;
 
-      // Position in front of camera
+      // Position in front of camera (world-space for XR locomotion)
       const cam = world.camera;
-      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-      celebMesh.position.copy(cam.position).addScaledVector(fwd, 1.3);
-      celebMesh.quaternion.copy(cam.quaternion);
+      const _cPos = new THREE.Vector3();
+      const _cQuat = new THREE.Quaternion();
+      cam.getWorldPosition(_cPos);
+      cam.getWorldQuaternion(_cQuat);
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_cQuat);
+      celebMesh.position.copy(_cPos).addScaledVector(fwd, 1.3);
+      celebMesh.quaternion.copy(_cQuat);
       celebMesh.visible = true;
 
       // Hide UI while celebration shows
@@ -669,12 +707,16 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       // Keep viewfinder frame + countdown number in front of camera during countdown
       if (countdownActive || fMesh.visible || cdMesh.visible) {
         const cam = world.camera;
-        const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
-        const base = cam.position.clone().addScaledVector(fwd, 1.4);
+        const _cdPos = new THREE.Vector3();
+        const _cdQuat = new THREE.Quaternion();
+        cam.getWorldPosition(_cdPos);
+        cam.getWorldQuaternion(_cdQuat);
+        const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_cdQuat);
+        const base = _cdPos.addScaledVector(fwd, 1.4);
         fMesh.position.copy(base);
-        fMesh.quaternion.copy(cam.quaternion);
+        fMesh.quaternion.copy(_cdQuat);
         cdMesh.position.copy(base);
-        cdMesh.quaternion.copy(cam.quaternion);
+        cdMesh.quaternion.copy(_cdQuat);
       }
 
       // Poll left controller menu button to toggle panel
@@ -740,18 +782,13 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       await splatSystem.load(splatEntity, { animate: true });
     }
 
-    const directSplat = params.get("splat") || "./splats/world_500k_edit_6_4.splat";
+    const directSplat = params.get("splat") || "./splats/Yume World (6)_room.spz";
 
     if (directSplat) {
       // Direct splat URL: load it immediately, skip create UI
-      splatEntity.setValue(GaussianSplatLoader, "splatUrl", directSplat);
-      // Apply orientation fix on parent BEFORE load so it's correct during animation
-      if (splatEntity.object3D) {
-        splatEntity.object3D.quaternion.set(1, 0, 0, 0);
-        splatEntity.object3D.scale.setScalar(1.0);
-        splatEntity.object3D.position.y = 0.05;
-      }
-      splatSystem.load(splatEntity, { animate: true })
+      const defaultPos = directSplat.includes("room") ? [0, 0.94, 0] : directSplat.includes("treehouse") ? [0, 0.14, 0] : undefined;
+      switchToWorld(directSplat, false, defaultPos)
+        .catch((err) => console.error("[World] Default world load failed:", err))
         .then(async () => {
           // Load GLB models
           const testGlb = params.get("glb") || "./SM_Aligator.glb";
@@ -773,7 +810,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
           // Use existing world_id or create one via test endpoint for Meshy upload
           let splatWorldId: string = worldId || "";
-          if (!splatWorldId) {
+          if (!splatWorldId && apiBase) {
             try {
               const resp = await fetch(`${apiBase}/api/test/create-world`, { method: "POST" });
               if (resp.ok) {

@@ -166,29 +166,25 @@ export class PanelSystem extends createSystem({
       const worldButton = document.getElementById("world-button") as UIKit.Text;
       if (worldButton) {
         const worlds = [
-          { name: "Yume World", url: "./splats/world_500k_edit_6_4.splat" },
+          { name: "Room", url: "./splats/Yume World (6)_room.spz", position: [0, 0.94, 0] },
+          { name: "Treehouse", url: "./splats/Yume World (4)_treehouse.spz", position: [0, 0.14, 0] },
           { name: "Disney Castle", url: "./splats/disney_castle.spz" },
-          { name: "SensAI", url: "./splats/sensai.spz" },
         ];
-        let currentWorldIndex = 0; // starts on Yume World (default loaded)
-        let switching = false;
+        let currentWorldIndex = 0; // starts on Room (default loaded)
 
         worldButton.setProperties({ text: "Next World" });
 
         worldButton.addEventListener("click", () => {
-          if (switching) return;
-          switching = true;
           currentWorldIndex = (currentWorldIndex + 1) % worlds.length;
           const next = worlds[currentWorldIndex];
           worldButton.setProperties({ text: "Loading..." });
           globalThis.dispatchEvent(new Event("hide-ui"));
           globalThis.dispatchEvent(
             new CustomEvent("switch-world", {
-              detail: { splatUrl: next.url, autoFit: false, position: [0, 0, 0], walls: false },
+              detail: { splatUrl: next.url, autoFit: false, position: (next as any).position ?? [0, 0, 0], walls: false },
             }),
           );
           const onDone = () => {
-            switching = false;
             worldButton.setProperties({ text: "Next World" });
             globalThis.removeEventListener("switch-world-done", onDone);
           };
