@@ -341,9 +341,8 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
     const matProps = {
       transparent: true,
-      depthTest: true,
+      depthTest: false,
       depthWrite: false,
-      depthFunc: THREE.AlwaysDepth,
     };
 
     function addPhotoThumb(dataURL: string) {
