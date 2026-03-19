@@ -143,6 +143,12 @@ export function initPhotoSystem(world: World): void {
     if (photos.length >= MAX_PHOTOS) return;
     setTimeout(doCapture, 100);
   });
+
+  // Reset for another round of photos
+  globalThis.addEventListener("photos-reset", () => {
+    photos.length = 0;
+    globalThis.dispatchEvent(new CustomEvent("photo-count", { detail: 0 }));
+  });
 }
 
 function showFlash(): void {

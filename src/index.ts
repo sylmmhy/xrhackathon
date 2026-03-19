@@ -679,10 +679,11 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         celebMesh.visible = false;
         showPhotoStripDisplay(photos);
 
-        // After another 5 seconds: hide strip, restore UI
+        // After another 5 seconds: hide strip, reset photos, restore UI
         setTimeout(() => {
           stripMesh.visible = false;
           countdownActive = false;
+          globalThis.dispatchEvent(new Event("photos-reset"));
         }, 5000);
       }, 4000);
     });
@@ -697,6 +698,16 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     globalThis.addEventListener("post-capture", () => {
       if (panelEntity.object3D) panelEntity.object3D.visible = panelVisible;
       photoStrip.visible = thumbIndex > 0;
+    });
+
+    // Reset photo system for another round
+    globalThis.addEventListener("photos-reset", () => {
+      thumbIndex = 0;
+      // Remove all thumbnail children from the strip
+      while (photoStrip.children.length > 0) {
+        photoStrip.remove(photoStrip.children[0]);
+      }
+      photoStrip.visible = false;
     });
 
     // In XR: panel + photo strip both follow the player's head each frame
