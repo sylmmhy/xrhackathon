@@ -91,9 +91,67 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     let worldSwitching = false;
     let loadGeneration = 0; // tracks which load is current; stale loads are discarded
 
+    // 3D loading text shown during world transitions
+    const loadCanvas = document.createElement("canvas");
+    loadCanvas.width = 512; loadCanvas.height = 128;
+    const loadTexture = new THREE.CanvasTexture(loadCanvas);
+    loadTexture.colorSpace = THREE.SRGBColorSpace;
+    const loadMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.0, 0.25),
+      new THREE.MeshBasicMaterial({ map: loadTexture, transparent: true, depthTest: false }),
+    );
+    loadMesh.renderOrder = 20000;
+    loadMesh.frustumCulled = false;
+    loadMesh.visible = false;
+    world.scene.add(loadMesh);
+
+    let loadingDotsInterval: ReturnType<typeof setInterval> | null = null;
+
+    function showLoadingText() {
+      let dotCount = 0;
+      const drawFrame = () => {
+        const dotStrs = [".", "..", "..."];
+        const dots = dotStrs[dotCount % 3];
+        const pad = " ".repeat(3 - (dotCount % 3));
+        const ctx = loadCanvas.getContext("2d")!;
+        ctx.clearRect(0, 0, 512, 128);
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.beginPath();
+        ctx.roundRect(8, 8, 496, 112, 20);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 36px Nunito, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`Loading world${dots}${pad}`, 256, 64);
+        loadTexture.needsUpdate = true;
+        dotCount++;
+      };
+      drawFrame();
+      loadingDotsInterval = setInterval(drawFrame, 400);
+
+      // Position in front of camera
+      const cam = world.camera;
+      const _p = new THREE.Vector3();
+      const _q = new THREE.Quaternion();
+      cam.getWorldPosition(_p);
+      cam.getWorldQuaternion(_q);
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_q);
+      loadMesh.position.copy(_p).addScaledVector(fwd, 1.5);
+      loadMesh.quaternion.copy(_q);
+      loadMesh.visible = true;
+    }
+
+    function hideLoadingText() {
+      loadMesh.visible = false;
+      if (loadingDotsInterval) { clearInterval(loadingDotsInterval); loadingDotsInterval = null; }
+    }
+
     async function switchToWorld(splatUrl: string, autoFit = false, position?: number[]) {
       // Increment generation so any in-progress load becomes stale
       const thisGen = ++loadGeneration;
+
+      showLoadingText("Loading world...");
 
       clearSpawnedObjects(world.scene);
 
@@ -120,8 +178,11 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       // If a newer load started while we were loading, remove ourselves (stale)
       if (loadGeneration !== thisGen) {
         try { await splatSystem.unload(splatEntity, { animate: false }); } catch {}
+        hideLoadingText();
         return;
       }
+
+      hideLoadingText();
 
       // Reset player position and rotation to origin after world switch
       const player = (world as any).player as THREE.Object3D | undefined;
@@ -260,6 +321,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         width: "40%",
       });
     panelEntity.object3D!.position.set(0, 1.29, -1.9);
+    panelEntity.object3D!.visible = false; // hidden until world loads, press Y to show
 
     // ------------------------------------------------------------
     // Photo thumbnail strip — follows camera independently in XR
@@ -730,7 +792,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     world.scene.add(_panelPollMesh);
     // Toggle panel visibility with left controller Y button (XR) or H key (browser)
     let menuBtnWasPressed = false;
-    let panelVisible = true;
+    let panelVisible = false; // hidden by default, press Y or H to show
 
     const togglePanel = () => {
       panelVisible = !panelVisible;
@@ -751,17 +813,21 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         return;
       }
 
-      // Keep viewfinder frame + countdown number in front of camera during countdown
-      if (countdownActive || fMesh.visible || cdMesh.visible) {
+      // Keep viewfinder frame, countdown number, and loading text in front of camera
+      if (countdownActive || fMesh.visible || cdMesh.visible || loadMesh.visible) {
         const cam = world.camera;
         const _cdPos = new THREE.Vector3();
         const _cdQuat = new THREE.Quaternion();
         cam.getWorldPosition(_cdPos);
         cam.getWorldQuaternion(_cdQuat);
         const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(_cdQuat);
-        const base = _cdPos.addScaledVector(fwd, 1.4);
+        const base = _cdPos.clone().addScaledVector(fwd, 1.4);
         fMesh.position.copy(base);
         fMesh.quaternion.copy(_cdQuat);
+        if (loadMesh.visible) {
+          loadMesh.position.copy(_cdPos).addScaledVector(fwd, 1.5);
+          loadMesh.quaternion.copy(_cdQuat);
+        }
         cdMesh.position.copy(base);
         cdMesh.quaternion.copy(_cdQuat);
       }
@@ -833,10 +899,32 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 
     if (directSplat) {
       // Direct splat URL: load it immediately, skip create UI
+      // Fullscreen loading overlay — covers everything including IWSDK ScreenSpace panel
+      const loadingOverlay = document.createElement("div");
+      loadingOverlay.style.cssText = `
+        position:fixed; inset:0; z-index:99999; background:#000;
+        display:flex; align-items:center; justify-content:center;
+        font-family:Nunito,sans-serif;
+      `;
+      const loadingLabel = document.createElement("div");
+      loadingLabel.textContent = "Loading world.";
+      loadingLabel.style.cssText = `color:#fff; font-size:24px; font-weight:700;`;
+      loadingOverlay.appendChild(loadingLabel);
+      document.body.appendChild(loadingOverlay);
+      let overlayDots = 0;
+      const overlayDotsInterval = setInterval(() => {
+        overlayDots++;
+        const d = (overlayDots % 3) + 1;
+        loadingLabel.innerHTML = `Loading world${".".repeat(d)}<span style="visibility:hidden">${".".repeat(3 - d)}</span>`;
+      }, 400);
+
+      countdownActive = true;
       const defaultPos = directSplat.includes("room") ? [0, 0.94, 0] : directSplat.includes("treehouse") ? [0, 0.14, 0] : undefined;
       switchToWorld(directSplat, false, defaultPos)
         .catch((err) => console.error("[World] Default world load failed:", err))
         .then(async () => {
+          clearInterval(overlayDotsInterval);
+          loadingOverlay.remove();
           // Load GLB models
           const testGlb = params.get("glb") || "./SM_Aligator.glb";
           if (testGlb) {

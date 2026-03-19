@@ -168,6 +168,7 @@ export class PanelSystem extends createSystem({
         const worlds = [
           { name: "Room", url: "./splats/Yume World (6)_room.spz", position: [0, 0.94, 0] },
           { name: "Treehouse", url: "./splats/Yume World (4)_treehouse.spz", position: [0, 0.14, 0] },
+          { name: "Yume World", url: "./splats/world_500k_edit_6_4.splat", position: [0, 0.05, 0] },
           { name: "Disney Castle", url: "./splats/disney_castle.spz" },
         ];
         let currentWorldIndex = 0; // starts on Room (default loaded)
