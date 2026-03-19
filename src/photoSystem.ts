@@ -21,7 +21,9 @@ export function initPhotoSystem(world: World): void {
     // We use Three.js layers instead of visible=false — this survives IWSDK's own
     // update loop that may re-enable visibility during renderer.render().
     // Camera default layers.mask = 1 (layer 0 only) → objects on layer 31 are skipped.
-    globalThis.dispatchEvent(new Event("pre-capture"));
+    if (!captureRetrying) {
+      globalThis.dispatchEvent(new Event("pre-capture"));
+    }
 
     const xr = renderer.xr;
     const ctrlGroups = [
@@ -43,13 +45,24 @@ export function initPhotoSystem(world: World): void {
     if (player?.raySpaces?.left) player.raySpaces.left.traverse(moveToLayer31);
     if (player?.raySpaces?.right) player.raySpaces.right.traverse(moveToLayer31);
 
-    // IWSDK cursor dot (CircleGeometry) is added to xrOrigin (not the controller)
-    // and tagged with userData.attached = true. Also catch any stray Lines.
+    // IWSDK cursor dot, stray lines, blob shadows, and UI panel meshes
     world.scene.traverse((obj) => {
       if (obj.userData.attached ||
           obj instanceof THREE.Line ||
           obj instanceof THREE.LineSegments) {
         moveToLayer31(obj);
+      }
+      // Blob shadows: depthTest=false planes with transparent material near ground
+      if (obj instanceof THREE.Mesh) {
+        const mat = obj.material as THREE.MeshBasicMaterial;
+        if (mat?.depthTest === false && mat?.depthWrite === false && mat?.transparent === true && mat?.map) {
+          moveToLayer31(obj);
+        }
+        // UI panel meshes: high renderOrder or AlwaysDepth
+        if (obj.renderOrder >= 10000 ||
+            mat?.depthFunc === THREE.AlwaysDepth) {
+          moveToLayer31(obj);
+        }
       }
     });
 
@@ -67,15 +80,37 @@ export function initPhotoSystem(world: World): void {
     cam.getWorldQuaternion(photoCam.quaternion);
     photoCam.updateMatrixWorld();
 
-    // Keep XR enabled so Three.js material rendering stays in XR color mode.
-    // We redirect to our render target instead of the XR framebuffer.
-    // Force SRGBColorSpace so both Three.js materials and SparkJS splat output sRGB.
-    const prevOutputCS = renderer.outputColorSpace;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-
     // Temporarily disable XR so the XR manager doesn't override our viewport/camera
     const wasXrEnabled = renderer.xr.enabled;
     renderer.xr.enabled = false;
+
+    // Make both splat and toys output raw sRGB so no per-pixel correction is needed:
+    // 1. SparkJS: set encodeLinear=false → outputs raw sRGB (no linear conversion)
+    // 2. Three.js: set textures to LinearSRGBColorSpace → treats sRGB values as linear
+    //    (passes through raw sRGB without converting). Restored after capture.
+    const encodeLinearUniforms: { value: boolean }[] = [];
+    const textureColorSpaces: { tex: THREE.Texture; cs: string }[] = [];
+
+    world.scene.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const mat of mats) {
+        // SparkJS splat materials
+        if ((mat as any)?.uniforms?.encodeLinear) {
+          encodeLinearUniforms.push((mat as any).uniforms.encodeLinear);
+          (mat as any).uniforms.encodeLinear.value = false;
+        }
+        // Three.js material textures — temporarily set to linear
+        if (mat instanceof THREE.MeshBasicMaterial || mat instanceof THREE.MeshStandardMaterial) {
+          const tex = mat.map;
+          if (tex && tex.colorSpace === THREE.SRGBColorSpace) {
+            textureColorSpaces.push({ tex, cs: tex.colorSpace });
+            tex.colorSpace = THREE.LinearSRGBColorSpace;
+            tex.needsUpdate = true;
+          }
+        }
+      }
+    });
 
     const prevTarget = renderer.getRenderTarget();
     renderer.setRenderTarget(renderTarget);
@@ -87,19 +122,42 @@ export function initPhotoSystem(world: World): void {
     renderer.setScissorTest(false);
     renderer.setRenderTarget(prevTarget);
 
+    // Restore everything
+    encodeLinearUniforms.forEach((u) => { u.value = true; });
+    textureColorSpaces.forEach(({ tex, cs }) => {
+      tex.colorSpace = cs as THREE.ColorSpace;
+      tex.needsUpdate = true;
+    });
     renderer.xr.enabled = wasXrEnabled;
-
-    renderer.outputColorSpace = prevOutputCS;
 
     // Restore all objects back to layer 0 so XR rendering resumes normally
     objsOnLayer31.forEach((obj) => { obj.layers.set(0); });
     globalThis.dispatchEvent(new Event("post-capture"));
 
-    // Read pixels (WebGL is bottom-to-top, flip Y, convert linear→sRGB)
+    // Read pixels
     const pixels = new Uint8Array(PHOTO_W * PHOTO_H * 4);
     renderer.readRenderTargetPixels(renderTarget, 0, 0, PHOTO_W, PHOTO_H, pixels);
     renderTarget.dispose();
 
+    // Check if capture is black (sample a few pixels in the center)
+    let nonBlackCount = 0;
+    for (let i = 0; i < 20; i++) {
+      const sx = Math.floor(PHOTO_W * 0.3 + Math.random() * PHOTO_W * 0.4);
+      const sy = Math.floor(PHOTO_H * 0.3 + Math.random() * PHOTO_H * 0.4);
+      const idx = (sy * PHOTO_W + sx) * 4;
+      if (pixels[idx] > 2 || pixels[idx + 1] > 2 || pixels[idx + 2] > 2) nonBlackCount++;
+    }
+    if (nonBlackCount < 3) {
+      // Mostly black — retry on next frame (skip pre/post-capture to avoid flicker)
+      console.warn("[photoSystem] Black frame detected, retrying...");
+      captureRequested = true;
+      captureRetrying = true;
+      return;
+    }
+    captureRetrying = false;
+
+    // Both splat (encodeLinear=false) and toys (textures set to linear passthrough)
+    // output raw sRGB values — just flip Y, no color conversion needed.
     const offscreen = document.createElement("canvas");
     offscreen.width = PHOTO_W;
     offscreen.height = PHOTO_H;
@@ -138,11 +196,32 @@ export function initPhotoSystem(world: World): void {
     }
   }
 
-  // Defer capture outside the XR render loop to avoid nested renderer.render() calls
+  // Capture inside the XR frame via onBeforeRender + microtask.
+  // setTimeout runs outside XR frames — on real headsets the WebGL context
+  // may not be renderable outside XR frame callbacks, causing black photos.
+  // A microtask from onBeforeRender runs AFTER renderer.render() returns
+  // (no nested render) but while XR camera matrices are still valid.
+  let captureRequested = false;
+  let captureRetrying = false; // true when retrying after black frame
+
   globalThis.addEventListener("take-photo", () => {
     if (photos.length >= MAX_PHOTOS) return;
-    setTimeout(doCapture, 100);
+    captureRequested = true;
+    captureRetrying = false;
   });
+
+  const capturePollMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.001, 0.001),
+    new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false }),
+  );
+  capturePollMesh.frustumCulled = false;
+  world.scene.add(capturePollMesh);
+
+  capturePollMesh.onBeforeRender = () => {
+    if (!captureRequested) return;
+    captureRequested = false;
+    Promise.resolve().then(() => doCapture());
+  };
 
   // Reset for another round of photos
   globalThis.addEventListener("photos-reset", () => {

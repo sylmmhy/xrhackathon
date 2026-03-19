@@ -56,7 +56,6 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
 })
   .then(async (world) => {
     world.camera.position.set(0, 1.5, 0);
-    initPhotoSystem(world);
     world.scene.background = new THREE.Color(0x000000);
     world.scene.add(new THREE.AmbientLight(0xffffff, 1.0));
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -75,6 +74,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
     // ------------------------------------------------------------
     const splatEntity = world.createTransformEntity();
     splatEntity.addComponent(GaussianSplatLoader, { autoLoad: false });
+    initPhotoSystem(world);
 
     const splatSystem = world.getSystem(GaussianSplatLoaderSystem)!;
 
@@ -679,24 +679,32 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
         celebMesh.visible = false;
         showPhotoStripDisplay(photos);
 
-        // After another 5 seconds: hide strip, reset photos, restore UI
+        // After another 5 seconds: hide strip, reset photos, keep UI hidden (press Y)
         setTimeout(() => {
           stripMesh.visible = false;
-          countdownActive = false;
           globalThis.dispatchEvent(new Event("photos-reset"));
+          // countdownActive stays true — press Y to bring UI back
         }, 5000);
       }, 4000);
     });
 
     // Hide UI during capture so it doesn't appear in the photo
     globalThis.addEventListener("pre-capture", () => {
-      if (panelEntity.object3D) panelEntity.object3D.visible = false;
-      photoStrip.visible = false;
+      // Move entire panel + strip subtree to layer 31 so photo camera can't see them
+      if (panelEntity.object3D) {
+        panelEntity.object3D.traverse((obj) => { obj.layers.set(31); });
+      }
+      photoStrip.traverse((obj) => { obj.layers.set(31); });
       countdownActive = false;
       fMesh.visible = false;
     });
     globalThis.addEventListener("post-capture", () => {
-      if (panelEntity.object3D) panelEntity.object3D.visible = panelVisible;
+      // Restore panel + strip back to layer 0
+      if (panelEntity.object3D) {
+        panelEntity.object3D.traverse((obj) => { obj.layers.set(0); });
+        panelEntity.object3D.visible = panelVisible;
+      }
+      photoStrip.traverse((obj) => { obj.layers.set(0); });
       photoStrip.visible = thumbIndex > 0;
     });
 
