@@ -142,16 +142,16 @@ export async function spawnGLBFromUrl(
     })
     .addComponent(PhysicsBody, {
       state: PhysicsState.Dynamic,
-      linearDamping: 0.4,
-      angularDamping: 0.3,
-      gravityFactor: 0.8,
+      linearDamping: 0.8,
+      angularDamping: 0.7,
+      gravityFactor: 1.0,
     })
     .addComponent(PhysicsShape, {
       shape: PhysicsShapeType.Box,
       dimensions: [scaledSize.x, scaledSize.y, scaledSize.z],
-      density: 0.3,
-      friction: 0.5,
-      restitution: 0.5,
+      density: 0.5,
+      friction: 0.9,
+      restitution: 0.1,
     });
 
   spawnedEntities.push(entity);

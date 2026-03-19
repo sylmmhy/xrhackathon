@@ -66,7 +66,7 @@ World.create(document.getElementById("scene-container") as HTMLDivElement, {
       .registerSystem(PanelSystem)
       .registerSystem(GaussianSplatLoaderSystem)
       .registerSystem(GrabPhysicsSystem)
-      //.registerSystem(PlayerPushSystem);
+      .registerSystem(PlayerPushSystem);
 
 
     // ------------------------------------------------------------

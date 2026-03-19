@@ -6,9 +6,9 @@ import {
   PhysicsState,
 } from "@iwsdk/core";
 
-const PUSH_RADIUS = 0.6; // how close before push triggers
-const PUSH_FORCE = 4.0; // impulse strength
-const PUSH_UP = 1.5; // upward lift on push (plush bounce feel)
+const PUSH_RADIUS = 0.5; // how close before push triggers
+const PUSH_FORCE = 0.8; // soft nudge
+const PUSH_UP = 0.2; // slight lift
 
 /**
  * Detects when the player walks into dynamic physics objects
@@ -74,9 +74,9 @@ export class PlayerPushSystem extends createSystem({
               pushDir.z * force,
             ],
             angularVelocity: [
-              (Math.random() - 0.5) * 6,
-              (Math.random() - 0.5) * 6,
-              (Math.random() - 0.5) * 6,
+              (Math.random() - 0.5) * 1.5,
+              (Math.random() - 0.5) * 1.5,
+              (Math.random() - 0.5) * 1.5,
             ],
           });
         }
